@@ -1,46 +1,46 @@
 # GameHub
 
-Modularna platforma LAN do gier multiplayer. Laptop jest hostem, telefony graczy kontrolerami. Gry to pluginy — dodajesz nową grę bez modyfikacji platformy.
+A modular LAN multiplayer game platform. The host laptop runs the server and displays the game board, while players use their phones as controllers. Games are plugins — add a new game without modifying the platform.
 
-## Gry
+## Games
 
-| Gra | Opis | Graczy |
-|-----|------|--------|
-| **Yahtzee** | Tracker wyników z dwoma sekcjami (Szkola + Figury), wielorundowy | 1-8 |
-| **Quiz** | Pub quiz ABCD z timerem, punktacja za szybkosc i poprawnosc | 1-8 |
+| Game | Description | Players |
+|------|-------------|---------|
+| **Yahtzee** | Score tracker with two sections (School + Figures), multi-round | 1–8 |
+| **Quiz** | Pub quiz with ABCD options, timer, scoring based on speed & accuracy | 1–8 |
 
-## Jak to dziala
+## How It Works
 
 ```
-  Laptop (host)              Telefony (gracze)
+  Laptop (host)              Phones (players)
   ┌─────────────┐            ┌──────────┐
   │  HostView   │◄──WiFi───►│Controller│
-  │  (pytania,  │  Socket.io │(przyciski│
-  │   tabela)   │            │ ABCD)    │
+  │  (questions, │  Socket.io │ (ABCD    │
+  │   scores)   │            │  buttons)│
   └──────┬──────┘            └──────────┘
          │
     Fastify + Socket.io
-    (serwer na laptopie)
+    (server on laptop)
 ```
 
-1. Host odpala serwer na laptopie
-2. Gracze skanuja QR telefonem (LAN, ten sam WiFi)
-3. Host startuje gre — pytania/tabela na laptopie, przyciski na telefonach
-4. Po grze wszyscy wracaja do huba, host odpala nastepna gre
+1. Host starts the server on the laptop
+2. Players scan QR code with their phones (LAN, same WiFi)
+3. Host starts the game — questions/scoreboard on the laptop, controls on phones
+4. After the game, everyone returns to the hub for the next game
 
-## Hub (wieczor gier)
+## Hub (Game Night Mode)
 
-Gracze skanuja QR **raz** i sa w poczekalni. Host startuje gry jedna po drugiej bez ponownego laczenia:
+Players scan the QR code **once** and stay in a lobby. The host starts games one after another without players needing to reconnect:
 
-- **Multiplayer** — telefony jako kontrolery
-- **Lokalny** — jeden ekran, host zarzadza wszystkim
+- **Multiplayer** — phones as controllers
+- **Local** — single screen, host manages everything
 
-Jest tez tryb "Szybka gra" — klasyczny per-game flow bez huba.
+There's also a "Quick Game" mode — classic per-game flow without the hub.
 
-## Uruchomienie
+## Getting Started
 
 ```bash
-# Wymagania: Node.js 18+, pnpm
+# Requirements: Node.js 18+, pnpm
 pnpm install
 pnpm dev
 ```
@@ -48,59 +48,70 @@ pnpm dev
 Dev server:
 - Frontend: `http://localhost:5173`
 - Backend: `http://localhost:3001`
-- Telefony: skanuj QR lub wejdz na `http://<IP-laptopa>:5173`
+- Phones: scan QR or go to `http://<laptop-IP>:5173`
 
 Production:
 ```bash
 pnpm build
-pnpm start    # Fastify serwuje frontend + API na porcie 3001
+pnpm start    # Fastify serves the frontend + API on port 3001
 ```
 
-## Architektura
+## Architecture
 
 ```
 packages/
-  core/       @gamehub/core     — typy TS, interfejsy pluginow (zero deps)
+  core/       @gamehub/core     — shared TS types & plugin interfaces (zero deps)
   server/     @gamehub/server   — Fastify 5 + Socket.io 4
   web/        @gamehub/web      — Vite 6 + React 19
 games/
-  yahtzee/    @gamehub/yahtzee  — plugin: tracker wynikow
-  quiz/       @gamehub/quiz     — plugin: quiz ABCD z timerem
+  yahtzee/    @gamehub/yahtzee  — plugin: score tracker
+  quiz/       @gamehub/quiz     — plugin: timed ABCD quiz
 ```
 
-Monorepo z pnpm workspaces. Kazda gra to osobny pakiet eksportujacy `GameServerPlugin` + `GameClientPlugin`.
+pnpm workspaces monorepo. Each game is a separate package exporting `GameServerPlugin` + `GameClientPlugin`.
 
-## System pluginow
+## Plugin System
 
-Kazda gra implementuje dwa interfejsy:
+Each game implements two interfaces:
 
 **Server** (`GameServerPlugin`):
-- `createInitialState()` — poczatkowy stan gry
-- `handleAction(ctx, action, payload)` — logika gry
-- `serializeForClient(state, isHost, playerIndex)` — co widzi klient (ukrywanie info)
-- `onTick?(session, broadcast)` — timer hook (co sekunde)
+- `createInitialState()` — initial game state
+- `handleAction(ctx, action, payload)` — game logic
+- `serializeForClient(state, isHost, playerIndex)` — what the client sees (info hiding)
+- `onTick?(session, broadcast)` — timer hook (every second)
 
 **Client** (`GameClientPlugin`):
-- `HostView` — React component na laptopie
-- `ControllerView` — React component na telefonie
-- `SummaryView` — ekran podsumowania
+- `HostView` — React component for the laptop
+- `ControllerView` — React component for phones
+- `SummaryView` — end-of-game summary screen
 
-## Dodawanie nowej gry
+## Adding a New Game
 
-1. Stworz pakiet w `games/twoja-gra/`
-2. Zaimplementuj `GameServerPlugin` i `GameClientPlugin`
-3. Dodaj import w `packages/server/src/plugin-loader.ts`
-4. Dodaj lazy import w `packages/web/src/plugin-registry.ts`
-5. `pnpm install` i gotowe
+1. Create a package in `games/your-game/`
+2. Implement `GameServerPlugin` and `GameClientPlugin`
+3. Add the import in `packages/server/src/plugin-loader.ts`
+4. Add a lazy import in `packages/web/src/plugin-registry.ts`
+5. `pnpm install` and you're done
 
-## Tech stack
+## Contributing
+
+We use **feature branches + PRs**:
+
+1. Create a branch from `main`: `git checkout -b feature/your-feature`
+2. Make your changes, commit
+3. Push and open a Pull Request
+4. Get a review, merge to `main`
+
+Branch naming: `feature/...`, `fix/...`, `chore/...`
+
+## Tech Stack
 
 - **Frontend**: React 19, Vite 6, TypeScript
 - **Backend**: Fastify 5, Socket.io 4, TypeScript
 - **Monorepo**: pnpm workspaces
-- **Auth**: tokeny (in-memory, LAN-only)
-- **State**: server-authoritative, optimistic updates na kliencie
+- **Auth**: tokens (in-memory, LAN-only)
+- **State**: server-authoritative with optimistic client updates
 
-## Licencja
+## License
 
-MIT — patrz [LICENSE.md](LICENSE.md)
+MIT — see [LICENSE.md](LICENSE.md)
