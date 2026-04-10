@@ -1,0 +1,111 @@
+/* Score table */
+.yahtzee-table { overflow-x: auto; }
+.yahtzee-table table { width: 100%; border-collapse: collapse; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.1); border-radius: 8px; min-width: 360px; }
+.yahtzee-table th, .yahtzee-table td { border: 1px solid #e5e7eb; padding: 8px 10px; text-align: center; font-size: 1rem; }
+.yahtzee-table th { background: #f9fafb; font-weight: 600; }
+.yahtzee-table td:first-child { text-align: left; font-weight: 500; background: #f9fafb; white-space: nowrap; min-width: 170px; font-size: 1.1rem; }
+
+/* Cell inputs */
+input.cell { width: 100%; min-width: 50px; border: 1px solid #ddd; border-radius: 4px; padding: 8px 6px; text-align: center; font-size: 1rem; background: #fff; }
+input.cell:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,.2); }
+input.cell::placeholder { color: #c0c0c0; font-size: .8rem; font-weight: 400; }
+input.cell:read-only { background: #f9fafb; color: #6b7280; cursor: default; }
+input.cell.flash { animation: cellFlash .6s ease; }
+@keyframes cellFlash { 0%{ background:#fef08a } 100%{ background:#fff } }
+input.cell.invalid { outline: 2px solid #ef4444; outline-offset: -1px; }
+
+/* School input group */
+.school-input { display: flex; align-items: center; gap: 3px; }
+.school-input input.cell { flex: 1; min-width: 0; }
+.sign-btn, .check-btn { padding: 6px 8px; font-size: .85rem; font-weight: 700; border: 1px solid #d1d5db; border-radius: 4px; background: #f3f4f6; color: #374151; cursor: pointer; line-height: 1; flex-shrink: 0; }
+.sign-btn:active, .check-btn:active { background: #d1d5db; }
+.check-btn { color: #22c55e; }
+
+/* Row states */
+tr.row-complete td:first-child { background: #e8e8e8; }
+tr.row-complete td { background: #f3f3f3; }
+.player-badges { display: inline-flex; gap: 3px; margin-left: 6px; vertical-align: middle; }
+.player-badge { display: inline-block; font-size: .65rem; font-weight: 700; width: 20px; height: 20px; line-height: 20px; text-align: center; border-radius: 50%; }
+.player-badge.done { background: #22c55e; color: #fff; }
+.player-badge.pending { background: #e5e7eb; color: transparent; }
+
+/* Section headers */
+tr.section-header td { background: #1e293b; color: #fff; font-weight: 700; text-align: left; font-size: .95rem; }
+tr.school-row td:first-child { background: #f0f7ff; }
+tr.figure-row td:first-child { background: #f5f0ff; }
+tr.row-complete.school-row td:first-child { background: #dce8f5; }
+tr.row-complete.figure-row td:first-child { background: #e8e0f5; }
+
+/* Sum rows */
+tr.sum-row td { background: #fef3c7; font-weight: 700; font-size: .95rem; }
+tr.total-row td { background: #d1fae5; font-weight: 800; font-size: 1rem; }
+.progress-text { font-size: .8rem; color: #9ca3af; font-weight: 500; }
+
+/* Player column header */
+th.player-th { cursor: grab; user-select: none; position: relative; }
+th.player-th:active { cursor: grabbing; }
+.th-status { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; vertical-align: middle; }
+.th-status.on { background: #22c55e; }
+.th-status.off { background: #ef4444; }
+
+/* Controller view */
+.ctrl-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 4px; margin-bottom: 8px; border-bottom: 2px solid #e5e7eb; }
+.ctrl-header h2 { font-size: 1.4rem; }
+.ctrl-section { margin-bottom: 16px; }
+.ctrl-section-title { background: #1e293b; color: #fff; padding: 10px 14px; border-radius: 8px 8px 0 0; font-weight: 700; font-size: 1rem; }
+.ctrl-row { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border: 1px solid #e5e7eb; border-top: none; background: #fff; min-height: 56px; }
+.ctrl-row:last-child { border-radius: 0 0 8px 8px; }
+.ctrl-row .cat-name { flex: 1; font-weight: 500; font-size: 1rem; }
+.ctrl-row input.cell { width: 90px; flex-shrink: 0; font-size: 18px; padding: 10px 8px; min-height: 44px; }
+.ctrl-row .school-input { display: flex; gap: 4px; }
+.ctrl-row .school-input input.cell { width: 70px; }
+.ctrl-row .sign-btn, .ctrl-row .check-btn { min-width: 40px; min-height: 44px; font-size: 1.1rem; padding: 8px; }
+.ctrl-sum { background: #fef3c7; padding: 12px 14px; border-radius: 0 0 8px 8px; border: 1px solid #e5e7eb; border-top: none; font-weight: 700; text-align: center; font-size: 1rem; }
+.ctrl-total { background: #d1fae5; padding: 16px; border-radius: 10px; font-weight: 800; font-size: 1.3rem; text-align: center; margin: 16px 0; }
+
+/* Mini-scoreboard */
+.mini-board-toggle { width: 100%; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; font-weight: 600; color: #4b5563; text-align: center; cursor: pointer; margin-bottom: 8px; }
+.mini-board-toggle:hover { background: #e5e7eb; }
+.mini-board { margin-bottom: 16px; }
+.mini-board table { font-size: .85rem; min-width: unset; }
+.mini-board th, .mini-board td { padding: 6px 8px; }
+
+/* Game summary */
+.summary-table { width: 100%; border-collapse: collapse; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.1); border-radius: 8px; }
+.summary-table th, .summary-table td { border: 1px solid #e5e7eb; padding: 12px 16px; text-align: center; font-size: 1rem; }
+.summary-table th { background: #f9fafb; font-weight: 600; }
+.summary-table td:first-child { text-align: left; }
+
+/* Responsive — host table */
+@media (max-width: 600px) {
+  .sign-btn, .check-btn { min-width: 28px; min-height: 36px; padding: 4px 6px; font-size: .85rem; }
+  .yahtzee-table table { min-width: unset; width: 100%; table-layout: fixed; }
+  .yahtzee-table th, .yahtzee-table td { padding: 6px 3px; font-size: .85rem; }
+  .yahtzee-table th:first-child, .yahtzee-table td:first-child { width: 45%; font-size: 1rem; font-weight: 600; white-space: normal; padding: 7px 6px; }
+  input.cell { font-size: 16px; padding: 6px 2px; min-width: unset; width: 100%; border-radius: 4px; }
+  .player-badges { margin-left: 4px; gap: 2px; }
+  .player-badge { width: 18px; height: 18px; line-height: 18px; font-size: .55rem; }
+  tr.section-header td { font-size: .9rem; padding: 6px 6px; }
+  tr.sum-row td, tr.total-row td { font-size: .85rem; }
+}
+
+/* Responsive — controller (phone) */
+@media (max-width: 600px) {
+  .ctrl-row { padding: 14px 12px; gap: 10px; min-height: 60px; }
+  .ctrl-row .cat-name { font-size: 1.05rem; font-weight: 600; }
+  .ctrl-row input.cell { width: 100px; font-size: 20px; padding: 12px 10px; min-height: 48px; border-radius: 6px; }
+  .ctrl-row .school-input { gap: 5px; }
+  .ctrl-row .school-input input.cell { width: 75px; }
+  .ctrl-row .sign-btn, .ctrl-row .check-btn { min-width: 44px; min-height: 48px; font-size: 1.2rem; padding: 10px; border-radius: 6px; }
+  .ctrl-section-title { padding: 12px 14px; font-size: 1.05rem; }
+  .ctrl-sum { padding: 14px; font-size: 1.05rem; }
+  .ctrl-total { padding: 18px; font-size: 1.4rem; }
+  .mini-board-toggle { padding: 14px; font-size: 1rem; min-height: 48px; }
+}
+
+@media (max-width: 380px) {
+  .player-badges { display: none; }
+  .ctrl-row input.cell { width: 80px; font-size: 18px; }
+  .ctrl-row .school-input input.cell { width: 60px; }
+  .ctrl-row .sign-btn, .ctrl-row .check-btn { min-width: 38px; min-height: 44px; }
+}

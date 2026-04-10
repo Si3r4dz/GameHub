@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yahtzee</title>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #222; padding: 16px; }
+h1 { text-align: center; margin-bottom: 16px; font-size: 1.6rem; }
+
+/* Shared screen styles */
+.screen { max-width: 480px; margin: 40px auto; background: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.1); }
+.screen label { display: block; font-weight: 600; margin-bottom: 6px; }
+.screen input[type="text"], .screen input[type="number"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; margin-bottom: 12px; }
+button { padding: 10px 20px; border: none; border-radius: 6px; font-size: 1rem; cursor: pointer; }
+.btn-primary { background: #2563eb; color: #fff; width: 100%; font-weight: 600; }
+.btn-primary:hover { background: #1d4ed8; }
+.btn-primary:disabled { background: #93c5fd; cursor: default; }
+.hidden { display: none !important; }
+
+/* Connection status */
+.conn-bar { text-align: center; padding: 6px; font-size: .8rem; font-weight: 600; border-radius: 6px; margin-bottom: 12px; }
+.conn-bar.ok { background: #dcfce7; color: #166534; }
+.conn-bar.lost { background: #fee2e2; color: #991b1b; }
+.conn-bar.connecting { background: #fef3c7; color: #92400e; }
+
+/* QR section */
+#qr-section { text-align: center; margin: 16px 0; }
+#qr-section svg { max-width: 200px; margin: 0 auto; display: block; }
+.game-url { font-family: monospace; font-size: .85rem; color: #4b5563; word-break: break-all; margin-top: 8px; background: #f3f4f6; padding: 8px; border-radius: 6px; }
+.game-code { font-size: 2rem; font-weight: 800; letter-spacing: .15em; color: #1e293b; margin: 12px 0; }
+
+/* Lobby player list */
+.player-list { list-style: none; margin: 16px 0; }
+.player-list li { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 6px; background: #f9fafb; margin-bottom: 6px; font-weight: 500; }
+.player-list .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.player-list .dot.on { background: #22c55e; }
+.player-list .dot.off { background: #d1d5db; }
+.player-list .dot.waiting { background: #fbbf24; animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%,100%{ opacity:1 } 50%{ opacity:.4 } }
+
+/* Game screen — host */
+#game-screen { display: none; max-width: 100%; }
+#table-wrap { overflow-x: auto; }
+#sticky-header { position: sticky; top: 0; z-index: 3; display: none; overflow: hidden; }
+#sticky-header table { width: 100%; border-collapse: collapse; background: #f9fafb; box-shadow: 0 2px 4px rgba(0,0,0,.15); }
+#sticky-header th { border: 1px solid #e5e7eb; padding: 8px 10px; text-align: center; font-size: 1rem; font-weight: 600; background: #f9fafb; }
+.toolbar { display: flex; gap: 8px; margin-bottom: 12px; justify-content: center; flex-wrap: wrap; }
+.toolbar button { background: #e5e7eb; color: #222; font-size: .9rem; }
+.toolbar button:hover { background: #d1d5db; }
+.toolbar .danger { background: #ef4444; color: #fff; }
+.toolbar .danger:hover { background: #dc2626; }
+
+/* Drag-reorder columns */
+th.player-th { cursor: grab; user-select: none; position: relative; }
+th.player-th:active { cursor: grabbing; }
+th.player-th.drag-over { background: #dbeafe; box-shadow: inset 0 0 0 2px #2563eb; }
+th .move-arrows { display: flex; justify-content: center; gap: 2px; margin-top: 4px; }
+th .move-btn { background: none; border: none; cursor: pointer; font-size: .75rem; color: #6b7280; padding: 2px 5px; border-radius: 3px; line-height: 1; }
+th .move-btn:hover { background: #e5e7eb; color: #111; }
+th .move-btn:disabled { opacity: .25; cursor: default; background: none; }
+
+/* Player connection dot in header */
+.th-status { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; vertical-align: middle; }
+.th-status.on { background: #22c55e; }
+.th-status.off { background: #ef4444; }
+
+/* Table */
+table { width: 100%; border-collapse: collapse; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.1); border-radius: 8px; min-width: 360px; }
+th, td { border: 1px solid #e5e7eb; padding: 8px 10px; text-align: center; font-size: 1rem; }
+th { background: #f9fafb; font-weight: 600; }
+td:first-child { text-align: left; font-weight: 500; background: #f9fafb; white-space: nowrap; min-width: 170px; font-size: 1.1rem; }
+input.cell { width: 100%; min-width: 50px; border: 1px solid #ddd; border-radius: 4px; padding: 8px 6px; text-align: center; font-size: 1rem; background: #fff; }
+input.cell:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,.2); }
+input.cell::placeholder { color: #c0c0c0; font-size: .8rem; font-weight: 400; }
+input.cell:read-only { background: #f9fafb; color: #6b7280; cursor: default; }
+input.cell.flash { animation: cellFlash .6s ease; }
+@keyframes cellFlash { 0%{ background:#fef08a } 100%{ background:#fff } }
+.school-input { display: flex; align-items: center; gap: 3px; }
+.school-input input.cell { flex: 1; min-width: 0; }
+.sign-btn, .x-btn { padding: 6px 8px; font-size: .85rem; font-weight: 700; border: 1px solid #d1d5db; border-radius: 4px; background: #f3f4f6; color: #374151; cursor: pointer; line-height: 1; flex-shrink: 0; }
+.sign-btn:active, .x-btn:active { background: #d1d5db; }
+.x-btn { color: #ef4444; }
+tr.row-complete td:first-child { background: #e8e8e8; }
+tr.row-complete td { background: #f3f3f3; }
+.player-badges { display: inline-flex; gap: 3px; margin-left: 6px; vertical-align: middle; }
+.player-badge { display: inline-block; font-size: .65rem; font-weight: 700; width: 20px; height: 20px; line-height: 20px; text-align: center; border-radius: 50%; color: #fff; }
+.player-badge.pending { background: #d1d5db; color: #9ca3af; }
+
+/* Section headers */
+tr.section-header td { background: #1e293b; color: #fff; font-weight: 700; text-align: left; font-size: .95rem; }
+tr.school-row td:first-child { background: #f0f7ff; }
+tr.figure-row td:first-child { background: #f5f0ff; }
+tr.row-complete.school-row td:first-child { background: #dce8f5; }
+tr.row-complete.figure-row td:first-child { background: #e8e0f5; }
+
+/* Sum rows */
+tr.sum-row td { background: #fef3c7; font-weight: 700; font-size: .95rem; }
+tr.total-row td { background: #d1fae5; font-weight: 800; font-size: 1rem; }
+th.col-highlight { transition: background .2s; }
+.progress-text { font-size: .8rem; color: #9ca3af; font-weight: 500; }
+input.cell.invalid { outline: 2px solid #ef4444; outline-offset: -1px; }
+.toolbar-separator { width: 1px; background: #d1d5db; align-self: stretch; margin: 0 4px; }
+
+/* --- Controller view --- */
+#controller-screen { display: none; max-width: 480px; margin: 0 auto; }
+.ctrl-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; margin-bottom: 8px; border-bottom: 2px solid #e5e7eb; }
+.ctrl-header h2 { font-size: 1.3rem; }
+.ctrl-section { margin-bottom: 16px; }
+.ctrl-section-title { background: #1e293b; color: #fff; padding: 8px 12px; border-radius: 6px 6px 0 0; font-weight: 700; font-size: .95rem; }
+.ctrl-row { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid #e5e7eb; border-top: none; background: #fff; }
+.ctrl-row:last-child { border-radius: 0 0 6px 6px; }
+.ctrl-row .cat-name { flex: 1; font-weight: 500; font-size: .95rem; }
+.ctrl-row input.cell { width: 80px; flex-shrink: 0; }
+.ctrl-row .school-input { display: flex; gap: 3px; }
+.ctrl-row .school-input input.cell { width: 60px; }
+.ctrl-sum { background: #fef3c7; padding: 10px 12px; border-radius: 0 0 6px 6px; border: 1px solid #e5e7eb; border-top: none; font-weight: 700; text-align: center; }
+.ctrl-total { background: #d1fae5; padding: 14px; border-radius: 8px; font-weight: 800; font-size: 1.2rem; text-align: center; margin: 16px 0; }
+
+/* Mini-scoreboard */
+.mini-board-toggle { width: 100%; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; font-weight: 600; color: #4b5563; text-align: center; cursor: pointer; margin-bottom: 8px; }
+.mini-board-toggle:hover { background: #e5e7eb; }
+.mini-board { margin-bottom: 16px; }
+.mini-board table { font-size: .85rem; min-width: unset; }
+.mini-board th, .mini-board td { padding: 6px 8px; }
+
+/* Responsive */
+@media (max-width: 600px) {
+  body { padding: 4px; }
+  body.game-active { padding-bottom: 64px; }
+  body.game-active > h1 { display: none; }
+  .screen { margin: 16px 8px; padding: 16px; }
+  body.game-active .toolbar { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #e5e7eb; padding: 8px 12px; margin-bottom: 0; z-index: 10; box-shadow: 0 -2px 8px rgba(0,0,0,.1); gap: 6px; justify-content: center; flex-wrap: wrap; }
+  .toolbar button { padding: 8px 10px; font-size: .8rem; }
+  .sign-btn, .x-btn { min-width: 28px; min-height: 36px; padding: 4px 6px; font-size: .85rem; }
+  table { min-width: unset; width: 100%; table-layout: fixed; }
+  th, td { padding: 6px 3px; font-size: .85rem; }
+  th:first-child, td:first-child { width: 45%; font-size: 1rem; font-weight: 600; white-space: normal; padding: 7px 6px; }
+  th:not(:first-child), td:not(:first-child) { width: calc(55% / var(--player-count, 2)); }
+  input.cell { font-size: 16px; padding: 6px 2px; min-width: unset; width: 100%; border-radius: 4px; }
+  .player-badges { margin-left: 4px; gap: 2px; }
+  .player-badge { width: 18px; height: 18px; line-height: 18px; font-size: .55rem; }
+  tr.section-header td { font-size: .9rem; padding: 6px 6px; }
+  tr.sum-row td, tr.total-row td { font-size: .85rem; }
+  #controller-screen { padding: 0 4px; }
+  .ctrl-row input.cell { font-size: 16px; }
+}
+
+@media (max-width: 380px) {
+  .player-badges { display: none; }
+}
+</style>
+</head>
+<body>
+
+<h1>Yahtzee</h1>
+
+<!-- HOST: Create game / lobby -->
+<div id="host-lobby" class="screen hidden">
+  <div id="conn-status" class="conn-bar connecting">Łączenie...</div>
+  <div id="lobby-create">
+    <p style="text-align:center;color:#6b7280;margin-bottom:16px;">Utwórz grę, a gracze dołączą telefonami</p>
+    <button id="btn-create" class="btn-primary">Utwórz grę</button>
+  </div>
+  <div id="lobby-waiting" class="hidden">
+    <div id="qr-section"></div>
+    <p style="text-align:center;font-weight:600;margin-bottom:8px;">Gracze:</p>
+    <ul id="lobby-players" class="player-list"></ul>
+    <button id="btn-start-game" class="btn-primary" disabled>Czekam na graczy...</button>
+  </div>
+</div>
+
+<!-- CONTROLLER: Join screen -->
+<div id="join-screen" class="screen hidden">
+  <div id="join-conn-status" class="conn-bar connecting">Łączenie...</div>
+  <h2 style="text-align:center;margin-bottom:16px;">Dołącz do gry</h2>
+  <label for="join-name">Twoje imię</label>
+  <input type="text" id="join-name" placeholder="Wpisz imię..." maxlength="20" autocomplete="off">
+  <div id="join-error" style="color:#ef4444;font-size:.85rem;margin-bottom:8px;" class="hidden"></div>
+  <button id="btn-join" class="btn-primary">Dołącz</button>
+</div>
+
+<!-- HOST: Game board -->
+<div id="game-screen">
+  <div id="host-conn-status" class="conn-bar ok hidden">Połączono</div>
+  <div class="toolbar">
+    <button id="btn-show-qr">QR Code</button>
+    <button id="btn-admin" style="display:none;">Tryb admina: WYŁ</button>
+    <button id="btn-reset">Resetuj pola</button>
+    <button id="btn-new" class="danger">Nowa gra</button>
+  </div>
+  <div id="sticky-header"></div>
+  <div id="table-wrap"><table id="score-table"></table></div>
+</div>
+
+<!-- CONTROLLER: Score entry -->
+<div id="controller-screen" class="hidden">
+  <div class="ctrl-header">
+    <h2 id="ctrl-player-name">—</h2>
+    <div id="ctrl-conn" class="conn-bar ok" style="margin:0;padding:4px 10px;">OK</div>
+  </div>
+  <div id="ctrl-categories"></div>
+  <div id="ctrl-total" class="ctrl-total">ŁĄCZNIE: —</div>
+  <button class="mini-board-toggle" id="btn-mini-board">▼ Tabela wszystkich graczy</button>
+  <div id="mini-board-wrap" class="mini-board hidden"></div>
+</div>
+
+<script>
+// ============ SHARED CONSTANTS & UTILS ============
+const SCHOOL_CATEGORIES = ['Jedynki (1)', 'Dwójki (2)', 'Trójki (3)', 'Czwórki (4)', 'Piątki (5)', 'Szóstki (6)'];
+const FIGURE_CATEGORIES = ['Jedna para', 'Dwie pary', 'Trójka', 'Kareta', 'Full', 'Mały street', 'Duży street', 'Generał', 'Nieparzyste', 'Parzyste', 'Losowe'];
+
+const PLAYER_COLORS = [
+  { bg: '#3b82f6', light: '#dbeafe' },
+  { bg: '#ef4444', light: '#fee2e2' },
+  { bg: '#22c55e', light: '#dcfce7' },
+  { bg: '#f59e0b', light: '#fef3c7' },
+  { bg: '#8b5cf6', light: '#ede9fe' },
+  { bg: '#ec4899', light: '#fce7f3' },
+  { bg: '#14b8a6', light: '#ccfbf1' },
+  { bg: '#f97316', light: '#ffedd5' },
+];
+
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escAttr(s) { return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function getInitials(name) {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+  return name.slice(0, 2).toUpperCase();
+}
+
+// --- Parsing ---
+function parseSchool(raw) {
+  if (raw === undefined || raw === null || raw === '') return null;
+  const s = raw.trim().toLowerCase();
+  if (s === 'x') return 0;
+  if (/^[+-]\d+$/.test(s)) return parseInt(s, 10);
+  if (/^\d+$/.test(s)) return parseInt(s, 10);
+  return null;
+}
+
+function parseFigure(raw) {
+  if (raw === undefined || raw === null || raw === '') return null;
+  const s = raw.trim();
+  if (/^\d+$/.test(s)) return parseInt(s, 10);
+  return null;
+}
+
+// --- Calculation ---
+function calcSchoolSum(playerIdx) {
+  let sum = 0;
+  let allFilled = true;
+  for (const cat of SCHOOL_CATEGORIES) {
+    const v = parseSchool(values[cat]?.[playerIdx]);
+    if (v === null) { allFilled = false; continue; }
+    sum += v;
+  }
+  if (!allFilled) {
+    let partial = 0, hasAny = false;
+    for (const cat of SCHOOL_CATEGORIES) {
+      const v = parseSchool(values[cat]?.[playerIdx]);
+      if (v !== null) { partial += v; hasAny = true; }
+    }
+    return hasAny ? partial : null;
+  }
+  return (sum < 0 ? -100 : 100) + sum;
+}
+
+function isSchoolComplete(playerIdx) {
+  for (const cat of SCHOOL_CATEGORIES) {
+    if (parseSchool(values[cat]?.[playerIdx]) === null) return false;
+  }
+  return true;
+}
+
+function calcFigureSum(playerIdx) {
+  let sum = 0, hasAny = false;
+  for (const cat of FIGURE_CATEGORIES) {
+    const v = parseFigure(values[cat]?.[playerIdx]);
+    if (v !== null) { sum += v; hasAny = true; }
+  }
+  return hasAny ? sum : null;
+}
+
+function calcTotal(playerIdx) {
+  const school = calcSchoolSum(playerIdx);
+  const figures = calcFigureSum(playerIdx);
+  if (school === null && figures === null) return null;
+  return (school || 0) + (figures || 0);
+}
+
+function countFilled(categories, playerIdx) {
+  let count = 0;
+  for (const cat of categories) {
+    const raw = values[cat]?.[playerIdx];
+    if (raw !== undefined && raw !== null && raw.toString().trim() !== '') count++;
+  }
+  return count;
+}
+
+function isAllComplete() {
+  const allCats = [...SCHOOL_CATEGORIES, ...FIGURE_CATEGORIES];
+  for (let i = 0; i < players.length; i++) {
+    for (const cat of allCats) {
+      const raw = values[cat]?.[i];
+      if (raw === undefined || raw === null || raw.toString().trim() === '') return false;
+    }
+  }
+  return true;
+}
+
+// ============ MODE DETECTION ============
+const MODE = window.location.pathname.startsWith('/join/') ? 'controller' : 'host';
+const GAME_ID_FROM_URL = MODE === 'controller'
+  ? window.location.pathname.split('/join/')[1].replace(/\/$/, '')
+  : null;
+
+// ============ STATE ============
+let players = [];    // [{index, name, connected}]
+let values = {};     // values[category][playerIndex] = raw string
+let gameId = null;
+let myToken = null;
+let myPlayerIndex = null;
+let isHost = MODE === 'host';
+let adminMode = false;
+
+// ============ SOCKET.IO ============
+const socket = io({ autoConnect: false });
+let socketConnected = false;
+
+socket.on('connect', () => {
+  socketConnected = true;
+  updateConnBar();
+  if (gameId && myToken) {
+    socket.emit('game:connect', { gameId, token: myToken });
+  }
+});
+
+socket.on('disconnect', () => {
+  socketConnected = false;
+  updateConnBar();
+});
+
+socket.on('game:state', (state) => {
+  players = state.players;
+  values = state.values;
+  gameId = state.gameId;
+
+  if (MODE === 'host') {
+    renderHostGame();
+    updateLobbyPlayers();
+  } else {
+    myPlayerIndex = state.playerIndex;
+    renderControllerView();
+  }
+});
+
+socket.on('player:joined', ({ playerIndex, name }) => {
+  players.push({ index: playerIndex, name, connected: false });
+  if (MODE === 'host') {
+    updateLobbyPlayers();
+    // Re-render table if game is already showing
+    if (!document.getElementById('game-screen').classList.contains('hidden') &&
+        document.getElementById('game-screen').style.display !== 'none') {
+      renderHostGame();
+    }
+  }
+  if (MODE === 'controller') updateMiniBoard();
+});
+
+socket.on('player:status', ({ playerIndex, connected }) => {
+  const p = players.find(pl => pl.index === playerIndex);
+  if (p) p.connected = connected;
+  if (MODE === 'host') {
+    updateLobbyPlayers();
+    updatePlayerHeaders();
+  }
+  if (MODE === 'controller') updateMiniBoard();
+});
+
+socket.on('score:changed', ({ category, playerIndex, value }) => {
+  if (!values[category]) values[category] = {};
+  values[category][playerIndex] = value;
+
+  if (MODE === 'host') {
+    updateCellDOM(category, playerIndex, value);
+    updateAllSums();
+    updateFilledState();
+    updateStickyHeader();
+  }
+  if (MODE === 'controller') {
+    if (playerIndex === myPlayerIndex) {
+      updateControllerCell(category, value);
+    }
+    updateControllerSums();
+    updateMiniBoard();
+  }
+});
+
+socket.on('game:reset', () => {
+  values = {};
+  if (MODE === 'host') renderHostGame();
+  if (MODE === 'controller') renderControllerView();
+});
+
+socket.on('game:error', ({ error }) => {
+  alert(error);
+});
+
+function updateConnBar() {
+  const bars = document.querySelectorAll('.conn-bar');
+  bars.forEach(bar => {
+    if (socketConnected) {
+      bar.className = 'conn-bar ok';
+      bar.textContent = 'Połączono';
+    } else {
+      bar.className = 'conn-bar lost';
+      bar.textContent = 'Rozłączono — łączenie...';
+    }
+  });
+}
+
+// ============ HOST: LOBBY ============
+if (MODE === 'host') {
+  document.getElementById('host-lobby').classList.remove('hidden');
+  document.getElementById('game-screen').style.display = 'none';
+
+  // Check for existing session
+  const savedGameId = sessionStorage.getItem('yahtzee_gameId');
+  const savedToken = sessionStorage.getItem('yahtzee_token');
+  if (savedGameId && savedToken) {
+    gameId = savedGameId;
+    myToken = savedToken;
+    socket.connect();
+  } else {
+    socket.connect();
+  }
+
+  document.getElementById('btn-create').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-create');
+    btn.disabled = true;
+    try {
+      const resp = await fetch('/api/games', { method: 'POST' });
+      const data = await resp.json();
+      gameId = data.gameId;
+      myToken = data.hostToken;
+      sessionStorage.setItem('yahtzee_gameId', gameId);
+      sessionStorage.setItem('yahtzee_token', myToken);
+      socket.emit('game:connect', { gameId, token: myToken });
+      showLobbyWaiting();
+    } catch (e) {
+      alert('Błąd tworzenia gry: ' + e.message);
+      btn.disabled = false;
+    }
+  });
+
+  document.getElementById('btn-start-game').addEventListener('click', () => {
+    if (players.length === 0) return;
+    document.getElementById('host-lobby').classList.add('hidden');
+    document.getElementById('game-screen').style.display = 'block';
+    document.getElementById('host-conn-status').classList.remove('hidden');
+    document.body.classList.add('game-active');
+    renderHostGame();
+    observeThead();
+  });
+
+  document.getElementById('btn-new').addEventListener('click', () => {
+    if (!confirm('Zakończyć grę i wrócić do lobby?')) return;
+    sessionStorage.removeItem('yahtzee_gameId');
+    sessionStorage.removeItem('yahtzee_token');
+    location.reload();
+  });
+
+  document.getElementById('btn-reset').addEventListener('click', () => {
+    if (!confirm('Wyczyścić wszystkie wyniki?')) return;
+    values = {};
+    socket.emit('game:reset', { gameId });
+    renderHostGame();
+  });
+
+  document.getElementById('btn-show-qr').addEventListener('click', () => {
+    document.getElementById('host-lobby').classList.remove('hidden');
+    document.getElementById('lobby-create').classList.add('hidden');
+    document.getElementById('lobby-waiting').classList.remove('hidden');
+    document.getElementById('game-screen').style.display = 'none';
+    document.getElementById('host-conn-status').classList.add('hidden');
+    document.body.classList.remove('game-active');
+    showLobbyWaiting();
+  });
+
+  document.getElementById('btn-admin').addEventListener('click', () => {
+    adminMode = !adminMode;
+    document.getElementById('btn-admin').textContent = `Tryb admina: ${adminMode ? 'WŁ' : 'WYŁ'}`;
+    renderHostGame();
+  });
+}
+
+async function showLobbyWaiting() {
+  document.getElementById('lobby-create').classList.add('hidden');
+  document.getElementById('lobby-waiting').classList.remove('hidden');
+  document.getElementById('btn-admin').style.display = '';
+
+  // Get server info for QR
+  try {
+    const resp = await fetch('/api/server-info');
+    const { ip, port } = await resp.json();
+    const url = `http://${ip}:${port}/join/${gameId}`;
+    const qrEl = document.getElementById('qr-section');
+    const qr = qrcode(0, 'M');
+    qr.addData(url);
+    qr.make();
+    qrEl.innerHTML = qr.createSvgTag(5) +
+      `<div class="game-code">${gameId}</div>` +
+      `<div class="game-url">${escHtml(url)}</div>`;
+  } catch (e) {
+    document.getElementById('qr-section').innerHTML = '<p style="color:#ef4444">Nie udało się pobrać adresu serwera</p>';
+  }
+  updateLobbyPlayers();
+}
+
+function updateLobbyPlayers() {
+  const list = document.getElementById('lobby-players');
+  if (!list) return;
+  list.innerHTML = players.map(p => {
+    const dotCls = p.connected ? 'on' : 'waiting';
+    const status = p.connected ? 'połączony' : 'oczekuje...';
+    return `<li><span class="dot ${dotCls}"></span>${escHtml(p.name)} <span style="color:#9ca3af;font-size:.8rem;margin-left:auto;">${status}</span></li>`;
+  }).join('');
+
+  const btn = document.getElementById('btn-start-game');
+  if (players.length > 0) {
+    btn.disabled = false;
+    btn.textContent = `Rozpocznij grę (${players.length} ${players.length === 1 ? 'gracz' : 'graczy'})`;
+  } else {
+    btn.disabled = true;
+    btn.textContent = 'Czekam na graczy...';
+  }
+}
+
+// ============ HOST: GAME TABLE ============
+function renderHostGame() {
+  const table = document.getElementById('score-table');
+  table.style.setProperty('--player-count', players.length);
+  let html = '<thead><tr><th></th>';
+  for (let i = 0; i < players.length; i++) {
+    const p = players[i];
+    const dotCls = p.connected ? 'on' : 'off';
+    const leftDis = i === 0 ? ' disabled' : '';
+    const rightDis = i === players.length - 1 ? ' disabled' : '';
+    html += `<th class="player-th" draggable="true" data-col="${i}">` +
+      `<span class="th-status ${dotCls}"></span>${escHtml(p.name)}` +
+      `<div class="move-arrows">` +
+      `<button class="move-btn" data-dir="-1" data-col="${i}"${leftDis}>◀</button>` +
+      `<button class="move-btn" data-dir="1" data-col="${i}"${rightDis}>▶</button>` +
+      `</div></th>`;
+  }
+  html += '</tr></thead><tbody>';
+
+  html += sectionHeader('Szkoła', players.length);
+  for (const cat of SCHOOL_CATEGORIES) html += renderInputRow(cat, 'school');
+  html += sumRow('Suma szkoły', 'school-sum', players.length);
+
+  html += sectionHeader('Figury', players.length);
+  for (const cat of FIGURE_CATEGORIES) html += renderInputRow(cat, 'figure');
+  html += sumRow('Suma figur', 'figure-sum', players.length);
+
+  html += totalRow('ŁĄCZNIE', 'total-sum', players.length);
+  html += '</tbody>';
+  table.innerHTML = html;
+
+  // Attach listeners
+  table.querySelectorAll('input.cell').forEach(input => {
+    if (!adminMode) {
+      input.readOnly = true;
+    } else {
+      input.addEventListener('input', onHostCellInput);
+    }
+    input.addEventListener('focus', () => {
+      const idx = parseInt(input.dataset.player, 10);
+      const color = PLAYER_COLORS[idx % PLAYER_COLORS.length];
+      const ths = table.querySelectorAll('thead th');
+      if (ths[idx + 1]) {
+        ths[idx + 1].classList.add('col-highlight');
+        ths[idx + 1].style.background = color.light;
+      }
+    });
+    input.addEventListener('blur', () => {
+      table.querySelectorAll('thead th.col-highlight').forEach(th => {
+        th.classList.remove('col-highlight');
+        th.style.background = '';
+      });
+    });
+  });
+
+  if (adminMode) {
+    table.querySelectorAll('.sign-btn').forEach(btn => btn.addEventListener('click', onHostSignToggle));
+    table.querySelectorAll('.x-btn').forEach(btn => btn.addEventListener('click', onHostXClick));
+  }
+
+  // Column reorder
+  table.querySelectorAll('.move-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const col = parseInt(btn.dataset.col, 10);
+      const dir = parseInt(btn.dataset.dir, 10);
+      swapPlayersHost(col, col + dir);
+    });
+  });
+
+  let dragCol = null;
+  table.querySelectorAll('th.player-th').forEach(th => {
+    th.addEventListener('dragstart', (e) => { dragCol = parseInt(th.dataset.col, 10); e.dataTransfer.effectAllowed = 'move'; th.style.opacity = '.5'; });
+    th.addEventListener('dragend', () => { th.style.opacity = ''; table.querySelectorAll('th.drag-over').forEach(el => el.classList.remove('drag-over')); });
+    th.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; th.classList.add('drag-over'); });
+    th.addEventListener('dragleave', () => { th.classList.remove('drag-over'); });
+    th.addEventListener('drop', (e) => { e.preventDefault(); th.classList.remove('drag-over'); const target = parseInt(th.dataset.col, 10); if (dragCol !== null && dragCol !== target) swapPlayersHost(dragCol, target); dragCol = null; });
+  });
+
+  updateAllSums();
+  updateFilledState();
+  updateStickyHeader();
+}
+
+function sectionHeader(label, cols) {
+  return `<tr class="section-header"><td colspan="${cols + 1}">${label}</td></tr>`;
+}
+
+function renderInputRow(category, type) {
+  const rowClass = type === 'school' ? 'school-row' : 'figure-row';
+  const shortName = category.replace(/\s*\(\d+\)$/, '');
+  let html = `<tr class="${rowClass}"><td>${escHtml(category)}</td>`;
+  for (let i = 0; i < players.length; i++) {
+    const raw = values[category]?.[i] || '';
+    if (type === 'school') {
+      html += `<td class="school-cell"><div class="school-input">` +
+        `<button class="sign-btn" data-cat="${escAttr(category)}" data-player="${i}" data-sign="toggle">${raw.toString().startsWith('-') ? '−' : '+'}</button>` +
+        `<input class="cell" data-cat="${escAttr(category)}" data-player="${i}" data-type="${type}" value="${escAttr(raw)}" placeholder="${escAttr(shortName)}" inputmode="numeric" pattern="[0-9]*">` +
+        `<button class="x-btn" data-cat="${escAttr(category)}" data-player="${i}" data-sign="x">✕</button>` +
+        `</div></td>`;
+    } else {
+      html += `<td><input class="cell" data-cat="${escAttr(category)}" data-player="${i}" data-type="${type}" value="${escAttr(raw)}" placeholder="${escAttr(shortName)}" inputmode="numeric" pattern="[0-9]*"></td>`;
+    }
+  }
+  return html + '</tr>';
+}
+
+function sumRow(label, id, cols) {
+  let html = `<tr class="sum-row"><td>${label}</td>`;
+  for (let i = 0; i < cols; i++) html += `<td id="${id}-${i}">—</td>`;
+  return html + '</tr>';
+}
+
+function totalRow(label, id, cols) {
+  let html = `<tr class="total-row"><td>${label}</td>`;
+  for (let i = 0; i < cols; i++) html += `<td id="${id}-${i}">—</td>`;
+  return html + '</tr>';
+}
+
+function updateCellDOM(category, playerIndex, value) {
+  const input = document.querySelector(`#score-table input.cell[data-cat="${CSS.escape(category)}"][data-player="${playerIndex}"]`);
+  if (!input) return;
+  if (input !== document.activeElement) {
+    input.value = value;
+    // Flash animation
+    input.classList.remove('flash');
+    void input.offsetWidth;
+    input.classList.add('flash');
+    // Update sign button for school
+    if (input.dataset.type === 'school') {
+      const signBtn = input.closest('.school-input')?.querySelector('.sign-btn');
+      if (signBtn) signBtn.textContent = value.toString().startsWith('-') ? '−' : '+';
+    }
+  }
+}
+
+function updatePlayerHeaders() {
+  players.forEach((p, i) => {
+    const dot = document.querySelector(`#score-table th[data-col="${i}"] .th-status`);
+    if (dot) dot.className = `th-status ${p.connected ? 'on' : 'off'}`;
+  });
+}
+
+function updateAllSums() {
+  const gameComplete = isAllComplete();
+  for (let i = 0; i < players.length; i++) {
+    const schoolSum = calcSchoolSum(i);
+    const figureSum = calcFigureSum(i);
+    const total = calcTotal(i);
+    const schoolEl = document.getElementById(`school-sum-${i}`);
+    const figureEl = document.getElementById(`figure-sum-${i}`);
+    const totalEl = document.getElementById(`total-sum-${i}`);
+
+    if (schoolEl) {
+      if (gameComplete && schoolSum !== null) {
+        schoolEl.textContent = schoolSum;
+      } else {
+        const filled = countFilled(SCHOOL_CATEGORIES, i);
+        schoolEl.innerHTML = `<span class="progress-text">${filled}/${SCHOOL_CATEGORIES.length}</span>`;
+      }
+    }
+    if (figureEl) {
+      if (gameComplete && figureSum !== null) {
+        figureEl.textContent = figureSum;
+      } else {
+        const filled = countFilled(FIGURE_CATEGORIES, i);
+        figureEl.innerHTML = `<span class="progress-text">${filled}/${FIGURE_CATEGORIES.length}</span>`;
+      }
+    }
+    if (totalEl) {
+      if (gameComplete && total !== null) {
+        totalEl.textContent = total;
+      } else {
+        const allFilled = countFilled(SCHOOL_CATEGORIES, i) + countFilled(FIGURE_CATEGORIES, i);
+        const totalCats = SCHOOL_CATEGORIES.length + FIGURE_CATEGORIES.length;
+        totalEl.innerHTML = `<span class="progress-text">${allFilled}/${totalCats}</span>`;
+      }
+    }
+  }
+}
+
+function updateFilledState() {
+  const allCats = [...SCHOOL_CATEGORIES, ...FIGURE_CATEGORIES];
+  document.querySelectorAll('#score-table input.cell').forEach(input => {
+    const hasValue = input.value.trim() !== '';
+    const idx = parseInt(input.dataset.player, 10);
+    const color = PLAYER_COLORS[idx % PLAYER_COLORS.length];
+    input.style.background = hasValue ? color.light : '';
+    input.style.borderColor = hasValue ? color.bg : '';
+  });
+  for (const cat of allCats) {
+    const inputs = document.querySelectorAll(`#score-table input[data-cat="${CSS.escape(cat)}"]`);
+    if (!inputs.length) continue;
+    const allFilled = Array.from(inputs).every(inp => inp.value.trim() !== '');
+    const row = inputs[0].closest('tr');
+    row.classList.toggle('row-complete', allFilled);
+
+    const labelCell = row.querySelector('td:first-child');
+    let badgesEl = labelCell.querySelector('.player-badges');
+    if (!badgesEl) {
+      badgesEl = document.createElement('span');
+      badgesEl.className = 'player-badges';
+      labelCell.appendChild(badgesEl);
+    }
+    let badgesHtml = '';
+    for (let i = 0; i < players.length; i++) {
+      const filled = inputs[i] && inputs[i].value.trim() !== '';
+      const color = PLAYER_COLORS[i % PLAYER_COLORS.length];
+      badgesHtml += `<span class="player-badge ${filled ? '' : 'pending'}" style="${filled ? `background:${color.bg}` : ''}" title="${escHtml(players[i].name)}">${escHtml(getInitials(players[i].name))}</span>`;
+    }
+    badgesEl.innerHTML = badgesHtml;
+  }
+}
+
+function swapPlayersHost(a, b) {
+  if (a < 0 || b < 0 || a >= players.length || b >= players.length || a === b) return;
+  [players[a], players[b]] = [players[b], players[a]];
+  players[a].index = a;
+  players[b].index = b;
+  for (const cat of [...SCHOOL_CATEGORIES, ...FIGURE_CATEGORIES]) {
+    if (!values[cat]) continue;
+    const tmp = values[cat][a];
+    values[cat][a] = values[cat][b];
+    values[cat][b] = tmp;
+  }
+  renderHostGame();
+}
+
+// Host admin mode cell editing
+function onHostCellInput(e) {
+  const input = e.target;
+  const cat = input.dataset.cat;
+  const playerIdx = parseInt(input.dataset.player, 10);
+  if (!values[cat]) values[cat] = {};
+  let val;
+  if (input.dataset.type === 'school') {
+    val = input.value.replace(/[^0-9]/g, '');
+    const signBtn = input.closest('.school-input')?.querySelector('.sign-btn');
+    if (signBtn && signBtn.textContent === '−' && val !== '') val = '-' + val;
+    else if (val !== '') val = '+' + val;
+    input.value = val;
+  } else {
+    val = input.value.replace(/[^0-9]/g, '');
+    if (val !== input.value) input.value = val;
+  }
+  values[cat][playerIdx] = val;
+  socket.emit('score:update', { gameId, category: cat, playerIndex: playerIdx, value: val });
+  updateAllSums();
+  updateFilledState();
+}
+
+function onHostSignToggle(e) {
+  const btn = e.target;
+  const cat = btn.dataset.cat;
+  const playerIdx = parseInt(btn.dataset.player, 10);
+  const input = document.querySelector(`#score-table input.cell[data-cat="${CSS.escape(cat)}"][data-player="${playerIdx}"]`);
+  if (!input) return;
+  let val = input.value.trim();
+  if (val.toLowerCase() === 'x') val = '';
+  if (val.startsWith('-')) { val = '+' + val.slice(1); btn.textContent = '+'; }
+  else if (val.startsWith('+')) { val = '-' + val.slice(1); btn.textContent = '−'; }
+  else if (val !== '') { val = '-' + val; btn.textContent = '−'; }
+  else { btn.textContent = btn.textContent === '+' ? '−' : '+'; return; }
+  input.value = val;
+  if (!values[cat]) values[cat] = {};
+  values[cat][playerIdx] = val;
+  socket.emit('score:update', { gameId, category: cat, playerIndex: playerIdx, value: val });
+  updateAllSums();
+  updateFilledState();
+}
+
+function onHostXClick(e) {
+  const btn = e.target;
+  const cat = btn.dataset.cat;
+  const playerIdx = parseInt(btn.dataset.player, 10);
+  const input = document.querySelector(`#score-table input.cell[data-cat="${CSS.escape(cat)}"][data-player="${playerIdx}"]`);
+  if (!input) return;
+  input.value = 'x';
+  if (!values[cat]) values[cat] = {};
+  values[cat][playerIdx] = 'x';
+  const signBtn = input.closest('.school-input')?.querySelector('.sign-btn');
+  if (signBtn) signBtn.textContent = '+';
+  socket.emit('score:update', { gameId, category: cat, playerIndex: playerIdx, value: 'x' });
+  updateAllSums();
+  updateFilledState();
+}
+
+// --- Sticky header ---
+function updateStickyHeader() {
+  const stickyEl = document.getElementById('sticky-header');
+  if (!stickyEl) return;
+  const thead = document.querySelector('#score-table thead');
+  if (!thead) { stickyEl.style.display = 'none'; return; }
+  let html = '<table><tr><th></th>';
+  for (const p of players) {
+    const dotCls = p.connected ? 'on' : 'off';
+    html += `<th><span class="th-status ${dotCls}"></span>${escHtml(p.name)}</th>`;
+  }
+  html += '</tr></table>';
+  stickyEl.innerHTML = html;
+  syncStickyWidths();
+  const wrap = document.getElementById('table-wrap');
+  wrap.removeEventListener('scroll', onTableScroll);
+  wrap.addEventListener('scroll', onTableScroll);
+}
+
+function onTableScroll() {
+  document.getElementById('sticky-header').scrollLeft = document.getElementById('table-wrap').scrollLeft;
+}
+
+function syncStickyWidths() {
+  const origCells = document.querySelectorAll('#score-table thead th');
+  const stickyCells = document.querySelectorAll('#sticky-header th');
+  if (origCells.length !== stickyCells.length) return;
+  const tableWidth = document.getElementById('score-table').offsetWidth;
+  const stickyTable = document.querySelector('#sticky-header table');
+  if (stickyTable) stickyTable.style.width = tableWidth + 'px';
+  origCells.forEach((cell, i) => {
+    stickyCells[i].style.width = cell.offsetWidth + 'px';
+    stickyCells[i].style.minWidth = cell.offsetWidth + 'px';
+    stickyCells[i].style.maxWidth = cell.offsetWidth + 'px';
+  });
+}
+
+const stickyObserver = new IntersectionObserver((entries) => {
+  const stickyEl = document.getElementById('sticky-header');
+  if (!stickyEl) return;
+  for (const entry of entries) {
+    stickyEl.style.display = entry.isIntersecting ? 'none' : 'block';
+  }
+}, { threshold: 0 });
+
+const origObserveTarget = { current: null };
+function observeThead() {
+  const thead = document.querySelector('#score-table thead');
+  if (!thead) return;
+  if (origObserveTarget.current) stickyObserver.unobserve(origObserveTarget.current);
+  origObserveTarget.current = thead;
+  stickyObserver.observe(thead);
+}
+
+window.addEventListener('resize', syncStickyWidths);
+
+// ============ CONTROLLER ============
+if (MODE === 'controller') {
+  document.getElementById('host-lobby').classList.add('hidden');
+  document.getElementById('game-screen').style.display = 'none';
+  document.getElementById('join-screen').classList.remove('hidden');
+
+  // Check for existing session
+  const savedToken = sessionStorage.getItem('yahtzee_ctrl_token');
+  const savedGameId = sessionStorage.getItem('yahtzee_ctrl_gameId');
+  if (savedToken && savedGameId === GAME_ID_FROM_URL) {
+    gameId = GAME_ID_FROM_URL;
+    myToken = savedToken;
+    socket.connect();
+    // Will receive game:state which triggers renderControllerView
+    document.getElementById('join-screen').classList.add('hidden');
+    document.getElementById('controller-screen').classList.remove('hidden');
+    document.getElementById('controller-screen').style.display = 'block';
+  } else {
+    socket.connect();
+  }
+
+  document.getElementById('btn-join').addEventListener('click', async () => {
+    const nameInput = document.getElementById('join-name');
+    const name = nameInput.value.trim();
+    if (!name) { nameInput.focus(); return; }
+
+    const errEl = document.getElementById('join-error');
+    errEl.classList.add('hidden');
+    document.getElementById('btn-join').disabled = true;
+
+    try {
+      const resp = await fetch(`/api/games/${GAME_ID_FROM_URL}/join`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) {
+        errEl.textContent = data.error;
+        errEl.classList.remove('hidden');
+        document.getElementById('btn-join').disabled = false;
+        return;
+      }
+
+      gameId = GAME_ID_FROM_URL;
+      myToken = data.playerToken;
+      myPlayerIndex = data.playerIndex;
+      sessionStorage.setItem('yahtzee_ctrl_token', myToken);
+      sessionStorage.setItem('yahtzee_ctrl_gameId', gameId);
+
+      socket.emit('game:connect', { gameId, token: myToken });
+
+      document.getElementById('join-screen').classList.add('hidden');
+      document.getElementById('controller-screen').classList.remove('hidden');
+      document.getElementById('controller-screen').style.display = 'block';
+    } catch (e) {
+      errEl.textContent = 'Błąd połączenia: ' + e.message;
+      errEl.classList.remove('hidden');
+      document.getElementById('btn-join').disabled = false;
+    }
+  });
+
+  // Enter key on name input
+  document.getElementById('join-name').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') document.getElementById('btn-join').click();
+  });
+
+  // Mini-board toggle
+  document.getElementById('btn-mini-board').addEventListener('click', () => {
+    const wrap = document.getElementById('mini-board-wrap');
+    const btn = document.getElementById('btn-mini-board');
+    if (wrap.classList.contains('hidden')) {
+      wrap.classList.remove('hidden');
+      btn.textContent = '▲ Ukryj tabelę';
+      updateMiniBoard();
+    } else {
+      wrap.classList.add('hidden');
+      btn.textContent = '▼ Tabela wszystkich graczy';
+    }
+  });
+}
+
+function renderControllerView() {
+  if (myPlayerIndex === null) return;
+  const me = players.find(p => p.index === myPlayerIndex);
+  if (!me) return;
+
+  document.getElementById('ctrl-player-name').textContent = me.name;
+
+  const container = document.getElementById('ctrl-categories');
+  let html = '';
+
+  // School
+  html += `<div class="ctrl-section">`;
+  html += `<div class="ctrl-section-title">Szkoła</div>`;
+  for (const cat of SCHOOL_CATEGORIES) {
+    const raw = values[cat]?.[myPlayerIndex] || '';
+    const shortName = cat.replace(/\s*\(\d+\)$/, '');
+    html += `<div class="ctrl-row">` +
+      `<span class="cat-name">${escHtml(cat)}</span>` +
+      `<div class="school-input">` +
+      `<button class="sign-btn" data-cat="${escAttr(cat)}" data-sign="toggle">${raw.toString().startsWith('-') ? '−' : '+'}</button>` +
+      `<input class="cell" data-cat="${escAttr(cat)}" data-type="school" value="${escAttr(raw)}" placeholder="${escAttr(shortName)}" inputmode="numeric" pattern="[0-9]*">` +
+      `<button class="x-btn" data-cat="${escAttr(cat)}" data-sign="x">✕</button>` +
+      `</div></div>`;
+  }
+  const schoolSum = calcSchoolSum(myPlayerIndex);
+  const schoolFilled = countFilled(SCHOOL_CATEGORIES, myPlayerIndex);
+  html += `<div class="ctrl-sum" id="ctrl-school-sum">Suma: ${schoolSum !== null ? schoolSum : '—'} <span class="progress-text">(${schoolFilled}/${SCHOOL_CATEGORIES.length})</span></div>`;
+  html += `</div>`;
+
+  // Figures
+  html += `<div class="ctrl-section">`;
+  html += `<div class="ctrl-section-title">Figury</div>`;
+  for (const cat of FIGURE_CATEGORIES) {
+    const raw = values[cat]?.[myPlayerIndex] || '';
+    html += `<div class="ctrl-row">` +
+      `<span class="cat-name">${escHtml(cat)}</span>` +
+      `<input class="cell" data-cat="${escAttr(cat)}" data-type="figure" value="${escAttr(raw)}" placeholder="${escAttr(cat)}" inputmode="numeric" pattern="[0-9]*">` +
+      `</div>`;
+  }
+  const figureSum = calcFigureSum(myPlayerIndex);
+  const figureFilled = countFilled(FIGURE_CATEGORIES, myPlayerIndex);
+  html += `<div class="ctrl-sum" id="ctrl-figure-sum">Suma: ${figureSum !== null ? figureSum : '—'} <span class="progress-text">(${figureFilled}/${FIGURE_CATEGORIES.length})</span></div>`;
+  html += `</div>`;
+
+  container.innerHTML = html;
+  updateControllerSums();
+
+  // Attach listeners
+  container.querySelectorAll('input.cell').forEach(input => {
+    input.addEventListener('input', onControllerCellInput);
+    input.addEventListener('blur', () => {
+      if (input.dataset.type === 'figure') {
+        const val = input.value.trim();
+        input.classList.toggle('invalid', val !== '' && !/^\d+$/.test(val));
+      }
+    });
+  });
+  container.querySelectorAll('.sign-btn').forEach(btn => {
+    btn.addEventListener('click', onControllerSignToggle);
+  });
+  container.querySelectorAll('.x-btn').forEach(btn => {
+    btn.addEventListener('click', onControllerXClick);
+  });
+}
+
+function onControllerCellInput(e) {
+  const input = e.target;
+  const cat = input.dataset.cat;
+  if (!values[cat]) values[cat] = {};
+  let val;
+  if (input.dataset.type === 'school') {
+    val = input.value.replace(/[^0-9]/g, '');
+    const signBtn = input.closest('.school-input')?.querySelector('.sign-btn');
+    if (signBtn && signBtn.textContent === '−' && val !== '') val = '-' + val;
+    else if (val !== '') val = '+' + val;
+    input.value = val;
+  } else {
+    val = input.value.replace(/[^0-9]/g, '');
+    if (val !== input.value) input.value = val;
+  }
+  values[cat][myPlayerIndex] = val;
+  socket.emit('score:update', { gameId, category: cat, playerIndex: myPlayerIndex, value: val });
+  updateControllerSums();
+}
+
+function onControllerSignToggle(e) {
+  const btn = e.target;
+  const cat = btn.dataset.cat;
+  const input = btn.closest('.school-input')?.querySelector('input.cell');
+  if (!input) return;
+  let val = input.value.trim();
+  if (val.toLowerCase() === 'x') val = '';
+  if (val.startsWith('-')) { val = '+' + val.slice(1); btn.textContent = '+'; }
+  else if (val.startsWith('+')) { val = '-' + val.slice(1); btn.textContent = '−'; }
+  else if (val !== '') { val = '-' + val; btn.textContent = '−'; }
+  else { btn.textContent = btn.textContent === '+' ? '−' : '+'; return; }
+  input.value = val;
+  if (!values[cat]) values[cat] = {};
+  values[cat][myPlayerIndex] = val;
+  socket.emit('score:update', { gameId, category: cat, playerIndex: myPlayerIndex, value: val });
+  updateControllerSums();
+}
+
+function onControllerXClick(e) {
+  const btn = e.target;
+  const cat = btn.dataset.cat;
+  const input = btn.closest('.school-input')?.querySelector('input.cell') ||
+                btn.closest('.ctrl-row')?.querySelector('input.cell');
+  if (!input) return;
+  input.value = 'x';
+  if (!values[cat]) values[cat] = {};
+  values[cat][myPlayerIndex] = 'x';
+  const signBtn = input.closest('.school-input')?.querySelector('.sign-btn');
+  if (signBtn) signBtn.textContent = '+';
+  socket.emit('score:update', { gameId, category: cat, playerIndex: myPlayerIndex, value: 'x' });
+  updateControllerSums();
+}
+
+function updateControllerCell(category, value) {
+  const input = document.querySelector(`#ctrl-categories input.cell[data-cat="${CSS.escape(category)}"]`);
+  if (!input || input === document.activeElement) return;
+  input.value = value;
+  input.classList.remove('flash');
+  void input.offsetWidth;
+  input.classList.add('flash');
+}
+
+function updateControllerSums() {
+  if (myPlayerIndex === null) return;
+  const schoolSum = calcSchoolSum(myPlayerIndex);
+  const figureSum = calcFigureSum(myPlayerIndex);
+  const total = calcTotal(myPlayerIndex);
+  const schoolFilled = countFilled(SCHOOL_CATEGORIES, myPlayerIndex);
+  const figureFilled = countFilled(FIGURE_CATEGORIES, myPlayerIndex);
+
+  const schoolEl = document.getElementById('ctrl-school-sum');
+  if (schoolEl) schoolEl.innerHTML = `Suma: ${schoolSum !== null ? schoolSum : '—'} <span class="progress-text">(${schoolFilled}/${SCHOOL_CATEGORIES.length})</span>`;
+
+  const figureEl = document.getElementById('ctrl-figure-sum');
+  if (figureEl) figureEl.innerHTML = `Suma: ${figureSum !== null ? figureSum : '—'} <span class="progress-text">(${figureFilled}/${FIGURE_CATEGORIES.length})</span>`;
+
+  const totalEl = document.getElementById('ctrl-total');
+  if (totalEl) totalEl.textContent = `ŁĄCZNIE: ${total !== null ? total : '—'}`;
+}
+
+function updateMiniBoard() {
+  const wrap = document.getElementById('mini-board-wrap');
+  if (!wrap || wrap.classList.contains('hidden')) return;
+  let html = '<table><thead><tr><th></th>';
+  for (const p of players) {
+    const dotCls = p.connected ? 'on' : 'off';
+    html += `<th><span class="th-status ${dotCls}"></span>${escHtml(p.name)}</th>`;
+  }
+  html += '</tr></thead><tbody>';
+  html += '<tr class="sum-row"><td>Szkoła</td>';
+  for (let i = 0; i < players.length; i++) {
+    const s = calcSchoolSum(i);
+    html += `<td>${s !== null ? s : '—'}</td>`;
+  }
+  html += '</tr><tr class="sum-row"><td>Figury</td>';
+  for (let i = 0; i < players.length; i++) {
+    const s = calcFigureSum(i);
+    html += `<td>${s !== null ? s : '—'}</td>`;
+  }
+  html += '</tr><tr class="total-row"><td>Łącznie</td>';
+  for (let i = 0; i < players.length; i++) {
+    const t = calcTotal(i);
+    html += `<td>${t !== null ? t : '—'}</td>`;
+  }
+  html += '</tr></tbody></table>';
+  wrap.innerHTML = html;
+}
+</script>
+</body>
+</html>

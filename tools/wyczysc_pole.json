@@ -1,0 +1,36 @@
+{
+  "type": "client",
+  "name": "wyczysc_pole",
+  "description": "Czysci pole w tabeli",
+  "expects_response": true,
+  "response_timeout_secs": 5,
+  "parameters": [
+    {
+      "id": "gracz",
+      "type": "string",
+      "description": "Nazwa gracza",
+      "dynamic_variable": "",
+      "required": true,
+      "constant_value": "",
+      "value_type": "llm_prompt"
+    },
+    {
+      "id": "kategoria",
+      "type": "string",
+      "description": "Nazwa kategorii",
+      "dynamic_variable": "",
+      "required": true,
+      "constant_value": "",
+      "value_type": "llm_prompt"
+    }
+  ],
+  "dynamic_variables": {
+    "dynamic_variable_placeholders": {}
+  },
+  "assignments": [],
+  "disable_interruptions": false,
+  "force_pre_tool_speech": "auto",
+  "tool_call_sound": null,
+  "tool_call_sound_behavior": "auto",
+  "execution_mode": "immediate"
+}
