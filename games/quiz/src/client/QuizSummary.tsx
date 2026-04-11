@@ -1,10 +1,12 @@
 import type { GameViewProps } from '@gamehub/core';
+import { useT } from '@gamehub/i18n';
 import type { QuizState } from './types';
 import './quiz.css';
 
 const MEDALS = ['🥇', '🥈', '🥉'];
 
 export function QuizSummary({ gameState, players, isHost }: GameViewProps) {
+  const t = useT();
   const state = gameState as QuizState | null;
   if (!state) return null;
 
@@ -30,9 +32,9 @@ export function QuizSummary({ gameState, players, isHost }: GameViewProps) {
 
   return (
     <div style={{ maxWidth: 600, margin: '0 auto', padding: 16 }}>
-      <h1 style={{ textAlign: 'center', marginBottom: 8 }}>Wyniki quizu</h1>
+      <h1 style={{ textAlign: 'center', marginBottom: 8 }}>{t('quiz.resultsTitle')}</h1>
       <p style={{ textAlign: 'center', color: '#6b7280', marginBottom: 24 }}>
-        {totalQuestions} pytań
+        {t('quiz.questionsPlayed', { count: totalQuestions })}
       </p>
 
       {/* Podium */}
@@ -41,9 +43,9 @@ export function QuizSummary({ gameState, players, isHost }: GameViewProps) {
           <div key={p.index} className="quiz-podium-item">
             <div className="medal">{MEDALS[i]}</div>
             <div className="name">{p.name}</div>
-            <div className="score">{state.scores[p.index] ?? 0} pkt</div>
+            <div className="score">{state.scores[p.index] ?? 0} pts</div>
             <div style={{ fontSize: '.8rem', color: '#9ca3af', marginTop: 4 }}>
-              {correctCounts[p.index]}/{totalQuestions} poprawnych
+              {t('quiz.correctCount', { correct: correctCounts[p.index], total: totalQuestions })}
             </div>
           </div>
         ))}
@@ -55,9 +57,9 @@ export function QuizSummary({ gameState, players, isHost }: GameViewProps) {
           <thead>
             <tr>
               <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>#</th>
-              <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>Gracz</th>
-              <th style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>Punkty</th>
-              <th style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>Poprawne</th>
+              <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>{t('quiz.playerCol')}</th>
+              <th style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>{t('quiz.pointsCol')}</th>
+              <th style={{ padding: '8px 12px', textAlign: 'center', borderBottom: '1px solid #e5e7eb' }}>{t('quiz.correctCol')}</th>
             </tr>
           </thead>
           <tbody>
@@ -87,7 +89,7 @@ export function QuizSummary({ gameState, players, isHost }: GameViewProps) {
             }}
             style={{ maxWidth: 300 }}
           >
-            Nowa gra
+            {t('common.newGame')}
           </button>
         </div>
       )}

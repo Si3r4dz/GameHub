@@ -24,7 +24,7 @@ export function registerHubRoutes(
     '/api/hub/:hubId/join',
     async (req, reply) => {
       const hub = hubStore.get(req.params.hubId);
-      if (!hub) return reply.status(404).send({ error: 'Hub nie istnieje' });
+      if (!hub) return reply.status(404).send({ error: 'error.hubNotFound' });
 
       const result = hubStore.addPlayer(req.params.hubId, req.body.name);
       if ('error' in result) {
@@ -50,13 +50,13 @@ export function registerHubRoutes(
     '/api/hub/:hubId/players/:playerId',
     async (req, reply) => {
       const hub = hubStore.get(req.params.hubId);
-      if (!hub) return reply.status(404).send({ error: 'Hub nie istnieje' });
+      if (!hub) return reply.status(404).send({ error: 'error.hubNotFound' });
       if (hub.hostToken !== req.query.token) {
-        return reply.status(403).send({ error: 'Tylko host może usuwać graczy' });
+        return reply.status(403).send({ error: 'error.hostOnlyRemove' });
       }
 
       const removed = hubStore.removePlayer(req.params.hubId, req.params.playerId);
-      if (!removed) return reply.status(404).send({ error: 'Gracz nie istnieje' });
+      if (!removed) return reply.status(404).send({ error: 'error.playerNotFound' });
 
       io.to(`hub:${hub.id}`).emit(HUB_EVENTS.HUB_PLAYER_REMOVED, {
         playerId: req.params.playerId,
@@ -71,15 +71,15 @@ export function registerHubRoutes(
     '/api/hub/:hubId',
     async (req, reply) => {
       const hub = hubStore.get(req.params.hubId);
-      if (!hub) return reply.status(404).send({ error: 'Hub nie istnieje' });
+      if (!hub) return reply.status(404).send({ error: 'error.hubNotFound' });
 
       const token = req.query.token;
-      if (!token) return reply.status(401).send({ error: 'Brak tokenu' });
+      if (!token) return reply.status(401).send({ error: 'error.noToken' });
 
       const isHost = hub.hostToken === token;
       const player = hub.players.find((p) => p.token === token);
       if (!isHost && !player) {
-        return reply.status(403).send({ error: 'Nieprawidłowy token' });
+        return reply.status(403).send({ error: 'error.invalidToken' });
       }
 
       return {
@@ -105,22 +105,22 @@ export function registerHubRoutes(
     '/api/hub/:hubId/games',
     async (req, reply) => {
       const hub = hubStore.get(req.params.hubId);
-      if (!hub) return reply.status(404).send({ error: 'Hub nie istnieje' });
+      if (!hub) return reply.status(404).send({ error: 'error.hubNotFound' });
 
       // Auth: must be host
       const token = req.headers['x-hub-token'] as string | undefined;
       if (token !== hub.hostToken) {
-        return reply.status(403).send({ error: 'Tylko host może tworzyć gry' });
+        return reply.status(403).send({ error: 'error.hostOnlyCreate' });
       }
 
       const { gameType, playerIds, config } = req.body;
       const plugin = plugins.get(gameType);
       if (!plugin) {
-        return reply.status(400).send({ error: 'Nieznany typ gry' });
+        return reply.status(400).send({ error: 'error.unknownGameType' });
       }
 
       if (hub.activeGameId) {
-        return reply.status(400).send({ error: 'Gra już trwa' });
+        return reply.status(400).send({ error: 'error.gameInProgress' });
       }
 
       // Select which hub players participate (default: all)
@@ -129,7 +129,7 @@ export function registerHubRoutes(
         : hub.players;
 
       if (selectedPlayers.length === 0) {
-        return reply.status(400).send({ error: 'Brak graczy' });
+        return reply.status(400).send({ error: 'error.noPlayers' });
       }
 
       const initialState = plugin.createInitialState();

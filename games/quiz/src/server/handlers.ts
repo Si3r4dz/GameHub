@@ -183,11 +183,11 @@ export function validateAction(
   playerIndex: number | null,
   isHost: boolean,
 ): string | null {
-  if (action === 'configure' && !isHost) return 'Tylko host może konfigurować quiz';
-  if (action === 'start-quiz' && !isHost) return 'Tylko host może rozpocząć quiz';
-  if (action === 'skip-question' && !isHost) return 'Tylko host może pominąć pytanie';
-  if (action === 'next-question' && !isHost) return 'Tylko host może przejść dalej';
-  if (action === 'answer' && playerIndex === null && !isHost) return 'Musisz być graczem';
+  if (action === 'configure' && !isHost) return 'error.hostOnly';
+  if (action === 'start-quiz' && !isHost) return 'error.hostOnly';
+  if (action === 'skip-question' && !isHost) return 'error.hostOnly';
+  if (action === 'next-question' && !isHost) return 'error.hostOnly';
+  if (action === 'answer' && playerIndex === null && !isHost) return 'error.mustBePlayer';
   return null;
 }
 

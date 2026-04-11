@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { GameConfig, HubMode } from '@gamehub/core';
+import type { GameConfig } from '@gamehub/core';
+import type { HubMode } from '@gamehub/core';
+import { useT, LanguageSwitcher } from '@gamehub/i18n';
 import { GameTile } from '../components/GameTile';
 
 type View = 'main' | 'quick-game' | 'quick-mode';
@@ -11,6 +13,7 @@ export function LauncherPage() {
   const [view, setView] = useState<View>('main');
   const [selectedGame, setSelectedGame] = useState<GameConfig | null>(null);
   const navigate = useNavigate();
+  const t = useT();
 
   useEffect(() => {
     fetch('/api/game-types')
@@ -70,10 +73,10 @@ export function LauncherPage() {
             onClick={() => createQuickGame(selectedGame.id, false)}
             style={{ padding: '16px 20px' }}
           >
-            📱 Multiplayer (telefony)
+            📱 {t('launcher.multiPlayer')}
             <br />
             <span style={{ fontSize: '.8rem', fontWeight: 400, opacity: .7 }}>
-              Gracze dołączają przez QR code
+              {t('launcher.multiPlayerDesc')}
             </span>
           </button>
           <button
@@ -81,17 +84,17 @@ export function LauncherPage() {
             onClick={() => createQuickGame(selectedGame.id, true)}
             style={{ padding: '16px 20px', background: '#059669' }}
           >
-            🖥️ Lokalna gra
+            🖥️ {t('launcher.localGame')}
             <br />
             <span style={{ fontSize: '.8rem', fontWeight: 400, opacity: .7 }}>
-              Jeden ekran, game master zarządza wszystkim
+              {t('launcher.localGameDesc')}
             </span>
           </button>
           <button
             onClick={() => { setView('quick-game'); setSelectedGame(null); }}
             style={{ background: 'none', color: '#6b7280', fontSize: '.9rem' }}
           >
-            ← Wróć
+            {t('common.back')}
           </button>
         </div>
       </div>
@@ -102,9 +105,9 @@ export function LauncherPage() {
   if (view === 'quick-game') {
     return (
       <div>
-        <h1>Szybka gra</h1>
+        <h1>{t('launcher.quickGame')}</h1>
         {games.length === 0 ? (
-          <p style={{ textAlign: 'center', color: '#9ca3af' }}>Brak gier</p>
+          <p style={{ textAlign: 'center', color: '#9ca3af' }}>{t('common.noGames')}</p>
         ) : (
           <div className="launcher-grid">
             {games.map((g) => (
@@ -121,7 +124,7 @@ export function LauncherPage() {
             onClick={() => setView('main')}
             style={{ background: 'none', color: '#6b7280', fontSize: '.9rem' }}
           >
-            ← Wróć
+            {t('common.back')}
           </button>
         </div>
       </div>
@@ -131,20 +134,23 @@ export function LauncherPage() {
   // Main screen
   return (
     <div className="screen">
-      <h1>GameHub</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h1 style={{ margin: 0 }}>GameHub</h1>
+        <LanguageSwitcher />
+      </div>
       {loading ? (
-        <p style={{ textAlign: 'center' }}>Ładowanie...</p>
+        <p style={{ textAlign: 'center' }}>{t('common.loading')}</p>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}>
           <button
             className="btn-primary"
             onClick={() => createHub('multiplayer')}
             style={{ padding: '16px 20px' }}
           >
-            📱 Wieczór gier (multiplayer)
+            📱 {t('launcher.gameNightMulti')}
             <br />
             <span style={{ fontSize: '.8rem', fontWeight: 400, opacity: .7 }}>
-              Gracze skanują QR raz, grają wiele gier
+              {t('launcher.gameNightMultiDesc')}
             </span>
           </button>
           <button
@@ -152,10 +158,10 @@ export function LauncherPage() {
             onClick={() => createHub('local')}
             style={{ padding: '16px 20px', background: '#059669' }}
           >
-            🖥️ Wieczór gier (lokalnie)
+            🖥️ {t('launcher.gameNightLocal')}
             <br />
             <span style={{ fontSize: '.8rem', fontWeight: 400, opacity: .7 }}>
-              Jeden ekran, dodaj graczy raz, graj wiele gier
+              {t('launcher.gameNightLocalDesc')}
             </span>
           </button>
           <button
@@ -170,10 +176,10 @@ export function LauncherPage() {
               fontSize: '1rem',
             }}
           >
-            Szybka gra
+            {t('launcher.quickGame')}
             <br />
             <span style={{ fontSize: '.8rem', fontWeight: 400, color: '#6b7280' }}>
-              Jedna gra, klasyczny tryb
+              {t('launcher.quickGameDesc')}
             </span>
           </button>
         </div>

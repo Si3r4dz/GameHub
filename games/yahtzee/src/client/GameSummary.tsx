@@ -1,4 +1,5 @@
 import type { GameViewProps } from '@gamehub/core';
+import { useT } from '@gamehub/i18n';
 import type { YahtzeeState } from './types';
 import './yahtzee.css';
 
@@ -7,11 +8,12 @@ export function GameSummary({
   players,
   isHost,
 }: GameViewProps) {
+  const t = useT();
   const state = gameState as YahtzeeState | null;
   const rounds = state?.rounds ?? [];
 
   if (rounds.length === 0) {
-    return <div style={{ textAlign: 'center', padding: 40 }}>Brak danych</div>;
+    return <div style={{ textAlign: 'center', padding: 40 }}>{t('yahtzee.noData')}</div>;
   }
 
   // Calculate grand totals per player
@@ -34,13 +36,13 @@ export function GameSummary({
 
   return (
     <div style={{ maxWidth: 600, margin: '0 auto', padding: 16 }}>
-      <h1 style={{ textAlign: 'center', marginBottom: 24 }}>Podsumowanie gry</h1>
+      <h1 style={{ textAlign: 'center', marginBottom: 24 }}>{t('yahtzee.gameSummary')}</h1>
 
       <div style={{ overflowX: 'auto' }}>
         <table className="summary-table">
           <thead>
             <tr>
-              <th>Gracz</th>
+              <th>{t('common.player')}</th>
               {rounds.map((_, i) => (
                 <th key={i}>R{i + 1}</th>
               ))}
@@ -83,7 +85,7 @@ export function GameSummary({
             }}
             style={{ maxWidth: 300 }}
           >
-            Nowa gra
+            {t('common.newGame')}
           </button>
         </div>
       )}

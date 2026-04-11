@@ -1,9 +1,10 @@
+import { useT } from '@gamehub/i18n';
 import type { ConnectionStatus } from '../hooks/useSocketConnection';
 
-const labels: Record<ConnectionStatus, string> = {
-  connected: 'Połączono',
-  connecting: 'Łączenie...',
-  disconnected: 'Rozłączono',
+const keys: Record<ConnectionStatus, string> = {
+  connected: 'connection.connected',
+  connecting: 'connection.connecting',
+  disconnected: 'connection.disconnected',
 };
 
 const classes: Record<ConnectionStatus, string> = {
@@ -13,5 +14,6 @@ const classes: Record<ConnectionStatus, string> = {
 };
 
 export function ConnectionBar({ status }: { status: ConnectionStatus }) {
-  return <div className={classes[status]}>{labels[status]}</div>;
+  const t = useT();
+  return <div className={classes[status]}>{t(keys[status])}</div>;
 }

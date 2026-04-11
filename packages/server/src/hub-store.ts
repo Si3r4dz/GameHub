@@ -42,16 +42,16 @@ export class HubStore {
     name: string,
   ): { playerId: string; playerToken: string } | { error: string } {
     const hub = this.hubs.get(hubId);
-    if (!hub) return { error: 'Hub nie istnieje' };
+    if (!hub) return { error: 'error.hubNotFound' };
 
     const trimmed = name.trim();
-    if (!trimmed) return { error: 'Podaj imię' };
-    if (hub.players.length >= 8) return { error: 'Maksymalnie 8 graczy' };
+    if (!trimmed) return { error: 'error.nameRequired' };
+    if (hub.players.length >= 8) return { error: 'error.maxPlayers' };
 
     const duplicate = hub.players.find(
       (p) => p.name.toLowerCase() === trimmed.toLowerCase(),
     );
-    if (duplicate) return { error: 'To imię jest już zajęte' };
+    if (duplicate) return { error: 'error.nameTaken' };
 
     const player: HubPlayer = {
       id: this.generatePlayerId(),

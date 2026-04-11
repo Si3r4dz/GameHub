@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useT } from '@gamehub/i18n';
 import { useSocket } from '../context/SocketContext';
 import { useSocketConnection } from '../hooks/useSocketConnection';
 import { useGameState } from '../hooks/useGameState';
@@ -10,6 +11,7 @@ export function JoinPage() {
   const { gameId } = useParams<{ gameId: string }>();
   const navigate = useNavigate();
   const socket = useSocket();
+  const t = useT();
   const { status, connect } = useSocketConnection(socket);
   const game = useGameState(socket, gameId);
   const [name, setName] = useState('');
@@ -44,7 +46,7 @@ export function JoinPage() {
     const data = await res.json();
 
     if (!res.ok) {
-      setError(data.error || 'Nie udało się dołączyć');
+      setError(data.error || t('join.error'));
       return;
     }
 
@@ -60,7 +62,7 @@ export function JoinPage() {
       <div className="screen">
         <ConnectionBar status={status} />
         <h2 style={{ textAlign: 'center', marginBottom: 12 }}>
-          Oczekiwanie na rozpoczęcie gry...
+          {t('join.waiting')}
         </h2>
         <PlayerList players={game.players} />
       </div>
@@ -69,16 +71,16 @@ export function JoinPage() {
 
   return (
     <div className="screen">
-      <h1>Dołącz do gry</h1>
+      <h1>{t('join.title')}</h1>
       <div style={{ marginTop: 16 }}>
-        <label htmlFor="name">Twoje imię</label>
+        <label htmlFor="name">{t('join.yourName')}</label>
         <input
           id="name"
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
-          placeholder="Wpisz imię..."
+          placeholder={t('join.namePlaceholder')}
           autoFocus
         />
         {error && (
@@ -91,7 +93,7 @@ export function JoinPage() {
           onClick={handleJoin}
           disabled={!name.trim()}
         >
-          Dołącz
+          {t('common.join')}
         </button>
       </div>
     </div>

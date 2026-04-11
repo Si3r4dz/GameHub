@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useT } from '@gamehub/i18n';
 import { useSocket } from '../context/SocketContext';
 import { useHubConnection } from '../hooks/useHubConnection';
 import { useHubState } from '../hooks/useHubState';
@@ -10,6 +11,7 @@ export function HubLobbyPage() {
   const { hubId } = useParams<{ hubId: string }>();
   const navigate = useNavigate();
   const socket = useSocket();
+  const t = useT();
   const { status, connect } = useHubConnection(socket);
   const hub = useHubState(socket, hubId);
   useWakeLock();
@@ -47,13 +49,13 @@ export function HubLobbyPage() {
         GameHub
       </h2>
       <p style={{ textAlign: 'center', color: '#6b7280', marginBottom: 20 }}>
-        Oczekiwanie na rozpoczęcie gry...
+        {t('hubLobby.waiting')}
       </p>
 
       {/* Player list */}
       <div>
         <h3 style={{ marginBottom: 8 }}>
-          Gracze ({hub.players.length})
+          {t('hub.playersCount', { count: hub.players.length })}
         </h3>
         <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
           {hub.players.map((p) => (
@@ -85,7 +87,7 @@ export function HubLobbyPage() {
       {/* Game history */}
       {hub.gameHistory.length > 0 && (
         <div style={{ marginTop: 24 }}>
-          <h3 style={{ marginBottom: 8, color: '#6b7280' }}>Zagrane</h3>
+          <h3 style={{ marginBottom: 8, color: '#6b7280' }}>{t('hubLobby.played')}</h3>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
             {hub.gameHistory.map((h, i) => (
               <li

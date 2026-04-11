@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { SocketProvider } from './context/SocketContext';
+import { I18nProvider } from '@gamehub/i18n';
 import { LauncherPage } from './pages/LauncherPage';
 import { LobbyPage } from './pages/LobbyPage';
 import { JoinPage } from './pages/JoinPage';
@@ -10,6 +11,7 @@ import { HubLobbyPage } from './pages/HubLobbyPage';
 
 export function App() {
   return (
+    <I18nProvider>
     <SocketProvider>
       <BrowserRouter>
         <Routes>
@@ -32,5 +34,6 @@ export function App() {
         </Routes>
       </BrowserRouter>
     </SocketProvider>
+    </I18nProvider>
   );
 }

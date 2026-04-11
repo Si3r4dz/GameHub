@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import type { GameConfig } from '@gamehub/core';
+import { useT, LanguageSwitcher } from '@gamehub/i18n';
 import { useSocket } from '../context/SocketContext';
 import { useHubConnection } from '../hooks/useHubConnection';
 import { useHubState } from '../hooks/useHubState';
@@ -12,6 +13,7 @@ export function HubPage() {
   const { hubId } = useParams<{ hubId: string }>();
   const navigate = useNavigate();
   const socket = useSocket();
+  const t = useT();
   const { status, connect } = useHubConnection(socket);
   const hub = useHubState(socket, hubId);
   const [games, setGames] = useState<GameConfig[]>([]);
@@ -88,7 +90,7 @@ export function HubPage() {
     });
     const data = await res.json();
     if (!res.ok) {
-      setAddError(data.error || 'Nie udało się dodać gracza');
+      setAddError(data.error || t('hub.addPlayerError'));
       return;
     }
     setPlayerName('');
@@ -117,7 +119,7 @@ export function HubPage() {
       });
       if (!res.ok) {
         const data = await res.json();
-        alert(data.error || 'Nie udało się utworzyć gry');
+        alert(data.error || t('hub.createGameError'));
       }
       // Navigation happens via hub:game-created event
     } finally {
@@ -127,7 +129,10 @@ export function HubPage() {
 
   return (
     <div className="screen">
-      <h1>GameHub</h1>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <h1>{t('hub.title')}</h1>
+        <LanguageSwitcher />
+      </div>
       <ConnectionBar status={status} />
 
       {/* QR for multiplayer / Player input for local */}
@@ -143,7 +148,7 @@ export function HubPage() {
       {hub.mode === 'local' && (
         <div style={{ marginBottom: 16 }}>
           <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>
-            Dodaj gracza
+            {t('hub.addPlayer')}
           </label>
           <div style={{ display: 'flex', gap: 8 }}>
             <input
@@ -151,7 +156,7 @@ export function HubPage() {
               value={playerName}
               onChange={(e) => setPlayerName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && addPlayer()}
-              placeholder="Imię gracza..."
+              placeholder={t('hub.playerNamePlaceholder')}
               style={{
                 flex: 1,
                 padding: '10px',
@@ -174,7 +179,7 @@ export function HubPage() {
                 cursor: 'pointer',
               }}
             >
-              Dodaj
+              {t('common.add')}
             </button>
           </div>
           {addError && (
@@ -188,13 +193,13 @@ export function HubPage() {
       {/* Player list */}
       <div style={{ marginBottom: 20 }}>
         <h3 style={{ marginBottom: 8 }}>
-          Gracze ({hub.players.length})
+          {t('hub.playersCount', { count: hub.players.length })}
         </h3>
         {hub.players.length === 0 ? (
           <p style={{ color: '#9ca3af', fontSize: '.9rem' }}>
             {hub.mode === 'multiplayer'
-              ? 'Czekam na graczy — niech zeskanują kod QR'
-              : 'Dodaj graczy powyżej'}
+              ? t('hub.waitingForPlayers')
+              : t('hub.addPlayersHint')}
           </p>
         ) : (
           <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
@@ -229,7 +234,7 @@ export function HubPage() {
                     fontSize: '1rem',
                     padding: '2px 6px',
                   }}
-                  title="Usuń gracza"
+                  title={t('hub.removePlayer')}
                 >
                   ✕
                 </button>
@@ -240,9 +245,9 @@ export function HubPage() {
       </div>
 
       {/* Game selection */}
-      <h3 style={{ marginBottom: 8 }}>Wybierz grę</h3>
+      <h3 style={{ marginBottom: 8 }}>{t('hub.chooseGame')}</h3>
       {games.length === 0 ? (
-        <p style={{ color: '#9ca3af' }}>Ładowanie...</p>
+        <p style={{ color: '#9ca3af' }}>{t('common.loading')}</p>
       ) : (
         <div className="launcher-grid">
           {games.map((g) => (
@@ -256,14 +261,14 @@ export function HubPage() {
       )}
       {creating && (
         <p style={{ textAlign: 'center', color: '#6b7280', marginTop: 8 }}>
-          Tworzenie gry...
+          {t('hub.creatingGame')}
         </p>
       )}
 
       {/* Game history */}
       {hub.gameHistory.length > 0 && (
         <div style={{ marginTop: 24 }}>
-          <h3 style={{ marginBottom: 8, color: '#6b7280' }}>Historia gier</h3>
+          <h3 style={{ marginBottom: 8, color: '#6b7280' }}>{t('hub.gameHistory')}</h3>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
             {hub.gameHistory.map((h, i) => (
               <li

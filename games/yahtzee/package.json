@@ -10,7 +10,8 @@
     "./client": "./src/client/plugin.ts"
   },
   "dependencies": {
-    "@gamehub/core": "workspace:*"
+    "@gamehub/core": "workspace:*",
+    "@gamehub/i18n": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^19.2.14"
