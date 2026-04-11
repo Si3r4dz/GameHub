@@ -41,7 +41,7 @@ There's also a "Quick Game" mode — classic per-game flow without the hub.
 
 ```bash
 # Requirements: Node.js 18+, pnpm
-pnpm install
+pnpm install          # uses frozen lockfile by default (clean install)
 pnpm dev
 ```
 
