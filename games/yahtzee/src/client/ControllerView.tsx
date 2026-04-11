@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import type { GameViewProps } from '@gamehub/core';
+import { useT } from '@gamehub/i18n';
 import type { YahtzeeState } from './types';
-import { SCHOOL_CATEGORIES, FIGURE_CATEGORIES } from './categories';
+import { SCHOOL_CATEGORIES, FIGURE_CATEGORIES, CATEGORY_I18N_KEYS } from './categories';
 import {
   calcSchoolSum,
   calcFigureSum,
@@ -20,6 +21,7 @@ export function ControllerView({
   playerIndex,
   onAction,
 }: GameViewProps) {
+  const t = useT();
   const state = gameState as YahtzeeState | null;
   const values = state?.values ?? {};
   const currentRound = state?.currentRound ?? 0;
@@ -28,11 +30,11 @@ export function ControllerView({
   const [showMiniBoard, setShowMiniBoard] = useState(false);
 
   if (playerIndex === null) {
-    return <div style={{ textAlign: 'center', padding: 40 }}>Ładowanie...</div>;
+    return <div style={{ textAlign: 'center', padding: 40 }}>{t('common.loading')}</div>;
   }
 
   const myName =
-    players.find((p) => p.index === playerIndex)?.name ?? 'Gracz';
+    players.find((p) => p.index === playerIndex)?.name ?? t('common.player');
 
   const handleChange = (category: string, value: string) => {
     onAction('score:update', { category, playerIndex, value });
@@ -52,7 +54,7 @@ export function ControllerView({
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {multiRound && (
             <span style={{ fontWeight: 600, fontSize: '.85rem', color: '#6b7280' }}>
-              Runda {currentRound + 1}/{totalRounds}
+              {t('yahtzee.round', { current: currentRound + 1, total: totalRounds })}
             </span>
           )}
           <span
@@ -67,10 +69,10 @@ export function ControllerView({
 
       {/* School section */}
       <div className="ctrl-section">
-        <div className="ctrl-section-title">Szkoła</div>
+        <div className="ctrl-section-title">{t('yahtzee.school')}</div>
         {SCHOOL_CATEGORIES.map((cat) => (
           <div key={cat} className="ctrl-row">
-            <span className="cat-name">{cat}</span>
+            <span className="cat-name">{t(CATEGORY_I18N_KEYS[cat]) || cat}</span>
             <SchoolInput
               value={values[cat]?.[playerIndex] ?? ''}
               onChange={(v) => handleChange(cat, v)}
@@ -78,21 +80,22 @@ export function ControllerView({
           </div>
         ))}
         <div className="ctrl-sum">
-          Suma:{' '}
-          {schoolSum !== null
-            ? schoolComplete
-              ? schoolSum
-              : `(${schoolSum}) — ${schoolFilled}/6`
-            : '—'}
+          {t('yahtzee.sum', {
+            value: schoolSum !== null
+              ? schoolComplete
+                ? schoolSum
+                : `(${schoolSum}) — ${schoolFilled}/6`
+              : '—',
+          })}
         </div>
       </div>
 
       {/* Figure section */}
       <div className="ctrl-section">
-        <div className="ctrl-section-title">Figury</div>
+        <div className="ctrl-section-title">{t('yahtzee.figures')}</div>
         {FIGURE_CATEGORIES.map((cat) => (
           <div key={cat} className="ctrl-row">
-            <span className="cat-name">{cat}</span>
+            <span className="cat-name">{t(CATEGORY_I18N_KEYS[cat]) || cat}</span>
             <FigureInput
               value={values[cat]?.[playerIndex] ?? ''}
               onChange={(v) => handleChange(cat, v)}
@@ -100,12 +103,12 @@ export function ControllerView({
           </div>
         ))}
         <div className="ctrl-sum">
-          Suma: {figureSum !== null ? `${figureSum} — ${figureFilled}/11` : '—'}
+          {t('yahtzee.sum', { value: figureSum !== null ? `${figureSum} — ${figureFilled}/11` : '—' })}
         </div>
       </div>
 
       {/* Total */}
-      <div className="ctrl-total">ŁĄCZNIE: {total !== null ? total : '—'}</div>
+      <div className="ctrl-total">{t('yahtzee.total')}: {total !== null ? total : '—'}</div>
 
       {/* Mini scoreboard — scores hidden until everyone finishes */}
       {(() => {
@@ -116,22 +119,22 @@ export function ControllerView({
               className="mini-board-toggle"
               onClick={() => setShowMiniBoard(!showMiniBoard)}
             >
-              {showMiniBoard ? '▲ Ukryj tabelę' : '▼ Tabela wyników'}
+              {showMiniBoard ? t('yahtzee.hideScoreboard') : t('yahtzee.showScoreboard')}
             </button>
             {showMiniBoard && (
               <div className="mini-board">
                 {!gameComplete && (
                   <p style={{ textAlign: 'center', color: '#9ca3af', fontSize: '.85rem', marginBottom: 8 }}>
-                    Wyniki innych graczy pojawią się po zakończeniu gry
+                    {t('yahtzee.scoresHidden')}
                   </p>
                 )}
                 <table>
                   <thead>
                     <tr>
-                      <th>Gracz</th>
-                      <th>Szkoła</th>
-                      <th>Figury</th>
-                      <th>Łącznie</th>
+                      <th>{t('common.player')}</th>
+                      <th>{t('yahtzee.school')}</th>
+                      <th>{t('yahtzee.figures')}</th>
+                      <th>{t('yahtzee.total')}</th>
                     </tr>
                   </thead>
                   <tbody>

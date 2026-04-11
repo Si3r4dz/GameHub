@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { GameViewProps } from '@gamehub/core';
+import { useT } from '@gamehub/i18n';
 import type { YahtzeeState } from './types';
-import { SCHOOL_CATEGORIES, FIGURE_CATEGORIES, PLAYER_COLORS } from './categories';
+import { SCHOOL_CATEGORIES, FIGURE_CATEGORIES, PLAYER_COLORS, CATEGORY_I18N_KEYS } from './categories';
 import {
   calcSchoolSum,
   calcFigureSum,
@@ -21,6 +22,7 @@ export function HostView({
   gameState,
   onAction,
 }: GameViewProps) {
+  const t = useT();
   const state = gameState as YahtzeeState | null;
   const propValues = state?.values ?? {};
   const currentRound = state?.currentRound ?? 0;
@@ -177,13 +179,13 @@ export function HostView({
   };
 
   const handleReset = () => {
-    if (confirm('Wyczyścić wszystkie wyniki?')) {
+    if (confirm(t('yahtzee.confirmReset'))) {
       onAction('game:reset', {});
     }
   };
 
   const handleNewGame = () => {
-    if (confirm('Zakończyć grę i wrócić do lobby?')) {
+    if (confirm(t('yahtzee.confirmEnd'))) {
       sessionStorage.removeItem('gamehub_gameId');
       sessionStorage.removeItem('gamehub_token');
       window.location.href = '/';
@@ -195,7 +197,8 @@ export function HostView({
     category: string,
     section: 'school' | 'figure',
   ) => {
-    const shortName = category.replace(/\s*\(\d+\)$/, '');
+    const catLabel = t(CATEGORY_I18N_KEYS[category]) || category;
+    const shortName = catLabel.replace(/\s*\(\d+\)$/, '');
     const allFilled = players.every((p) => {
       const raw = values[category]?.[p.index];
       return raw !== undefined && raw !== null && raw.toString().trim() !== '';
@@ -207,7 +210,7 @@ export function HostView({
         className={`${section}-row${allFilled ? ' row-complete' : ''}`}
       >
         <td>
-          {category}
+          {catLabel}
           <span className="player-badges">
             {players.map((p) => {
               const raw = values[category]?.[p.index];
@@ -270,17 +273,17 @@ export function HostView({
       <div className="toolbar">
         {multiRound && (
           <span style={{ fontWeight: 700, fontSize: '1rem', padding: '10px 12px' }}>
-            Runda {currentRound + 1}/{totalRounds}
+            {t('yahtzee.round', { current: currentRound + 1, total: totalRounds })}
           </span>
         )}
         <button onClick={() => window.open(`/game/${gameId}`, '_blank')}>
           QR Code
         </button>
         <button onClick={() => setAdminMode(!adminMode)}>
-          Tryb admina: {adminMode ? 'WŁ' : 'WYŁ'}
+          {t('yahtzee.adminMode', { state: t(adminMode ? 'yahtzee.adminOn' : 'yahtzee.adminOff') })}
         </button>
         <button onClick={handleReset}>
-          Resetuj pola
+          {t('yahtzee.resetFields')}
         </button>
         {gameComplete && !roundFinished && (
           multiRound ? (
@@ -292,14 +295,14 @@ export function HostView({
                   onAction('finish-game', {});
                 }}
               >
-                Zakończ grę
+                {t('yahtzee.endGame')}
               </button>
             ) : (
               <button
                 style={{ background: '#2563eb', color: '#fff', fontWeight: 700 }}
                 onClick={() => onAction('next-round', {})}
               >
-                Następna runda →
+                {t('yahtzee.nextRound')}
               </button>
             )
           ) : (
@@ -310,12 +313,12 @@ export function HostView({
                 onAction('finish-game', {});
               }}
             >
-              Zakończ grę
+              {t('yahtzee.endGame')}
             </button>
           )
         )}
         <button className="danger" onClick={handleNewGame}>
-          Nowa gra
+          {t('common.newGame')}
         </button>
       </div>
 
@@ -396,7 +399,7 @@ export function HostView({
           <tbody>
             {/* School section */}
             <tr className="section-header">
-              <td colSpan={players.length + 1}>Szkoła</td>
+              <td colSpan={players.length + 1}>{t('yahtzee.school')}</td>
             </tr>
             {SCHOOL_CATEGORIES.map((cat) => renderCategoryRow(cat, 'school'))}
             {(() => {
@@ -404,7 +407,7 @@ export function HostView({
               return (
                 <>
                   <tr className="sum-row">
-                    <td>Suma szkoły</td>
+                    <td>{t('yahtzee.schoolSum')}</td>
                     {players.map((p) => {
                       const filled = countFilled(SCHOOL_CATEGORIES, values, p.index);
                       const color = PLAYER_COLORS[p.index % PLAYER_COLORS.length];
@@ -426,11 +429,11 @@ export function HostView({
 
                   {/* Figure section */}
                   <tr className="section-header">
-                    <td colSpan={players.length + 1}>Figury</td>
+                    <td colSpan={players.length + 1}>{t('yahtzee.figures')}</td>
                   </tr>
                   {FIGURE_CATEGORIES.map((cat) => renderCategoryRow(cat, 'figure'))}
                   <tr className="sum-row">
-                    <td>Suma figur</td>
+                    <td>{t('yahtzee.figureSum')}</td>
                     {players.map((p) => {
                       const filled = countFilled(FIGURE_CATEGORIES, values, p.index);
                       const color = PLAYER_COLORS[p.index % PLAYER_COLORS.length];
@@ -452,7 +455,7 @@ export function HostView({
 
                   {/* Total */}
                   <tr className="total-row">
-                    <td>ŁĄCZNIE</td>
+                    <td>{t('yahtzee.total')}</td>
                     {players.map((p) => {
                       const color = PLAYER_COLORS[p.index % PLAYER_COLORS.length];
                       if (!gameComplete) {

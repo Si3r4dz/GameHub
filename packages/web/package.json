@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@gamehub/core": "workspace:*",
+    "@gamehub/i18n": "workspace:*",
     "@gamehub/yahtzee": "workspace:*",
     "@gamehub/quiz": "workspace:*",
     "react": "^19.1.0",

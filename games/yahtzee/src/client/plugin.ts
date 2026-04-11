@@ -4,8 +4,11 @@ import { ControllerView } from './ControllerView';
 import { GameSummary } from './GameSummary';
 import type { YahtzeeState } from './types';
 import { calcSchoolSum, calcFigureSum, calcTotal } from './scoring';
+import { pl } from './locales/pl';
+import { en } from './locales/en';
 
-export const clientPlugin: GameClientPlugin = {
+export const clientPlugin: GameClientPlugin & { locales: Record<string, Record<string, string>> } = {
+  locales: { pl, en },
   config: {
     id: 'yahtzee',
     name: 'Yahtzee',
@@ -24,15 +27,15 @@ export const clientPlugin: GameClientPlugin = {
     return {
       rows: [
         {
-          label: 'Szkoła',
+          label: 'yahtzee.school',
           values: players.map((_, i) => calcSchoolSum(values, i)),
         },
         {
-          label: 'Figury',
+          label: 'yahtzee.figures',
           values: players.map((_, i) => calcFigureSum(values, i)),
         },
         {
-          label: 'Łącznie',
+          label: 'yahtzee.total',
           values: players.map((_, i) => calcTotal(values, i)),
           isTotal: true,
         },

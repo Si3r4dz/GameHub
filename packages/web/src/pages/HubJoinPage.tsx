@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useT } from '@gamehub/i18n';
 
 export function HubJoinPage() {
   const { hubId } = useParams<{ hubId: string }>();
   const navigate = useNavigate();
+  const t = useT();
   const [name, setName] = useState('');
   const [error, setError] = useState('');
 
@@ -28,7 +30,7 @@ export function HubJoinPage() {
     const data = await res.json();
 
     if (!res.ok) {
-      setError(data.error || 'Nie udało się dołączyć');
+      setError(data.error || t('hubJoin.error'));
       return;
     }
 
@@ -40,16 +42,16 @@ export function HubJoinPage() {
 
   return (
     <div className="screen">
-      <h1>Dołącz do GameHub</h1>
+      <h1>{t('hubJoin.title')}</h1>
       <div style={{ marginTop: 16 }}>
-        <label htmlFor="name">Twoje imię</label>
+        <label htmlFor="name">{t('hubJoin.yourName')}</label>
         <input
           id="name"
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
-          placeholder="Wpisz imię..."
+          placeholder={t('hubJoin.namePlaceholder')}
           autoFocus
         />
         {error && (
@@ -62,7 +64,7 @@ export function HubJoinPage() {
           onClick={handleJoin}
           disabled={!name.trim()}
         >
-          Dołącz
+          {t('common.join')}
         </button>
       </div>
     </div>

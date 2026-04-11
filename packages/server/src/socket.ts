@@ -60,14 +60,14 @@ export function createSocketHandler(
       ({ hubId, token }: { hubId: string; token: string }) => {
         const hub = hubStore.get(hubId);
         if (!hub) {
-          return socket.emit(HUB_EVENTS.HUB_ERROR, { error: 'Hub nie istnieje' });
+          return socket.emit(HUB_EVENTS.HUB_ERROR, { error: 'error.hubNotFound' });
         }
 
         const isHost = hub.hostToken === token;
         const player = hub.players.find((p) => p.token === token);
 
         if (!isHost && !player) {
-          return socket.emit(HUB_EVENTS.HUB_ERROR, { error: 'Nieprawidłowy token' });
+          return socket.emit(HUB_EVENTS.HUB_ERROR, { error: 'error.invalidToken' });
         }
 
         const hubRoom = `hub:${hubId}`;
@@ -110,7 +110,7 @@ export function createSocketHandler(
         const session = store.get(gameId);
         if (!session) {
           return socket.emit(PLATFORM_EVENTS.GAME_ERROR, {
-            error: 'Gra nie istnieje',
+            error: 'error.gameNotFound',
           });
         }
 
@@ -119,7 +119,7 @@ export function createSocketHandler(
 
         if (!isHost && !player) {
           return socket.emit(PLATFORM_EVENTS.GAME_ERROR, {
-            error: 'Nieprawidłowy token',
+            error: 'error.invalidToken',
           });
         }
 

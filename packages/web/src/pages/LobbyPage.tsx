@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useT } from '@gamehub/i18n';
 import { useSocket } from '../context/SocketContext';
 import { useSocketConnection } from '../hooks/useSocketConnection';
 import { useGameState } from '../hooks/useGameState';
@@ -12,6 +13,7 @@ export function LobbyPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const socket = useSocket();
+  const t = useT();
   const { status, connect } = useSocketConnection(socket);
   const game = useGameState(socket, gameId);
   const [serverInfo, setServerInfo] = useState<{
@@ -62,7 +64,7 @@ export function LobbyPage() {
     });
     const data = await res.json();
     if (!res.ok) {
-      setAddError(data.error || 'Nie udało się dodać gracza');
+      setAddError(data.error || t('lobby.addPlayerError'));
       return;
     }
     setPlayerName('');
@@ -70,7 +72,7 @@ export function LobbyPage() {
 
   return (
     <div className="screen">
-      <h1>{isLocal ? 'Lokalna gra' : 'Lobby'}</h1>
+      <h1>{isLocal ? t('lobby.localGame') : t('lobby.title')}</h1>
       <ConnectionBar status={status} />
 
       {/* Multiplayer mode — show QR */}
@@ -86,7 +88,7 @@ export function LobbyPage() {
       {isLocal && (
         <div style={{ marginBottom: 16 }}>
           <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>
-            Dodaj gracza
+            {t('lobby.addPlayer')}
           </label>
           <div style={{ display: 'flex', gap: 8 }}>
             <input
@@ -94,7 +96,7 @@ export function LobbyPage() {
               value={playerName}
               onChange={(e) => setPlayerName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && addPlayer()}
-              placeholder="Imię gracza..."
+              placeholder={t('lobby.playerNamePlaceholder')}
               style={{
                 flex: 1,
                 padding: '10px',
@@ -117,7 +119,7 @@ export function LobbyPage() {
                 cursor: 'pointer',
               }}
             >
-              Dodaj
+              {t('common.add')}
             </button>
           </div>
           {addError && (
@@ -133,7 +135,7 @@ export function LobbyPage() {
       {/* Round selector */}
       <div style={{ marginBottom: 16 }}>
         <label style={{ display: 'block', fontWeight: 600, marginBottom: 6 }}>
-          Liczba rund
+          {t('lobby.rounds')}
         </label>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <input
@@ -155,7 +157,7 @@ export function LobbyPage() {
         onClick={startGame}
         disabled={game.players.length === 0}
       >
-        Rozpocznij grę ({game.players.length} graczy)
+        {t('lobby.startGame', { count: game.players.length })}
       </button>
     </div>
   );

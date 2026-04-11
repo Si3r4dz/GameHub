@@ -44,17 +44,17 @@ export class GameStore {
     maxPlayers: number,
   ): { playerIndex: number; playerToken: string } | { error: string } {
     const session = this.games.get(gameId);
-    if (!session) return { error: 'Gra nie istnieje' };
+    if (!session) return { error: 'error.gameNotFound' };
 
     const trimmed = name.trim();
-    if (!trimmed) return { error: 'Podaj imię' };
+    if (!trimmed) return { error: 'error.nameRequired' };
     if (session.players.length >= maxPlayers)
-      return { error: `Maksymalnie ${maxPlayers} graczy` };
+      return { error: 'error.maxPlayers' };
 
     const duplicate = session.players.find(
       (p) => p.name.toLowerCase() === trimmed.toLowerCase(),
     );
-    if (duplicate) return { error: 'To imię jest już zajęte' };
+    if (duplicate) return { error: 'error.nameTaken' };
 
     const playerToken = this.generateToken();
     const playerIndex = session.players.length;

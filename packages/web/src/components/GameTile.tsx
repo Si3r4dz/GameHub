@@ -1,4 +1,5 @@
 import type { GameConfig } from '@gamehub/core';
+import { useT } from '@gamehub/i18n';
 
 export function GameTile({
   config,
@@ -7,6 +8,8 @@ export function GameTile({
   config: GameConfig;
   onClick: () => void;
 }) {
+  const t = useT();
+
   return (
     <div
       className="game-tile"
@@ -14,10 +17,10 @@ export function GameTile({
       style={{ borderColor: config.color }}
     >
       <div className="icon">{config.icon}</div>
-      <div className="name">{config.name}</div>
-      <div className="desc">{config.description}</div>
+      <div className="name">{t(`game.${config.id}.name`)}</div>
+      <div className="desc">{t(`game.${config.id}.description`)}</div>
       <div className="players">
-        {config.minPlayers}–{config.maxPlayers} graczy
+        {config.minPlayers}–{config.maxPlayers} {t('common.players').toLowerCase()}
       </div>
     </div>
   );

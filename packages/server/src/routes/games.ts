@@ -19,7 +19,7 @@ export function registerGameRoutes(
     const { gameType } = req.body;
     const plugin = plugins.get(gameType);
     if (!plugin) {
-      return reply.status(400).send({ error: 'Nieznany typ gry' });
+      return reply.status(400).send({ error: 'error.unknownGameType' });
     }
 
     const initialState = plugin.createInitialState();
@@ -32,7 +32,7 @@ export function registerGameRoutes(
     '/api/games/:gameId/join',
     async (req, reply) => {
       const session = store.get(req.params.gameId);
-      if (!session) return reply.status(404).send({ error: 'Gra nie istnieje' });
+      if (!session) return reply.status(404).send({ error: 'error.gameNotFound' });
 
       const plugin = plugins.get(session.gameType);
       const maxPlayers = plugin?.config.maxPlayers ?? 8;
@@ -61,15 +61,15 @@ export function registerGameRoutes(
     '/api/games/:gameId',
     async (req, reply) => {
       const session = store.get(req.params.gameId);
-      if (!session) return reply.status(404).send({ error: 'Gra nie istnieje' });
+      if (!session) return reply.status(404).send({ error: 'error.gameNotFound' });
 
       const token = req.query.token;
-      if (!token) return reply.status(401).send({ error: 'Brak tokenu' });
+      if (!token) return reply.status(401).send({ error: 'error.noToken' });
 
       const isHost = session.hostToken === token;
       const player = session.players.find((p) => p.token === token);
       if (!isHost && !player) {
-        return reply.status(403).send({ error: 'Nieprawidłowy token' });
+        return reply.status(403).send({ error: 'error.invalidToken' });
       }
 
       const plugin = plugins.get(session.gameType);

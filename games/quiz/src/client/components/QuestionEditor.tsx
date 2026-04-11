@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useT, useLocale } from '@gamehub/i18n';
 import type { Question } from '../types';
 import { sampleSets } from '../../data/sample-sets';
 
@@ -15,6 +16,9 @@ export function QuestionEditor({
   onConfigure,
   onStart,
 }: QuestionEditorProps) {
+  const t = useT();
+  const { locale } = useLocale();
+  const localeSets = sampleSets[locale] ?? sampleSets['pl'] ?? [];
   const [localQuestions, setLocalQuestions] = useState<Question[]>(questions);
   const [localTimeLimit, setLocalTimeLimit] = useState(timeLimit);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -28,7 +32,7 @@ export function QuestionEditor({
   };
 
   const loadSet = (setId: string) => {
-    const set = sampleSets.find((s) => s.id === setId);
+    const set = localeSets.find((s) => s.id === setId);
     if (!set) return;
     const qs = set.questions.map((q, i) => ({
       id: `${setId}-${i}`,
@@ -81,7 +85,7 @@ export function QuestionEditor({
         );
         sync(qs);
       } catch {
-        alert('Błąd wczytywania JSON');
+        alert(t('quiz.editor.jsonError'));
       }
     };
     input.click();
@@ -89,7 +93,7 @@ export function QuestionEditor({
 
   return (
     <div className="quiz-editor">
-      <h1 style={{ textAlign: 'center', marginBottom: 16 }}>Edytor pytań</h1>
+      <h1 style={{ textAlign: 'center', marginBottom: 16 }}>{t('quiz.editor.title')}</h1>
 
       {/* Load preset */}
       <select
@@ -98,11 +102,11 @@ export function QuestionEditor({
         onChange={(e) => loadSet(e.target.value)}
       >
         <option value="" disabled>
-          Załaduj gotowy zestaw...
+          {t('quiz.editor.loadPreset')}
         </option>
-        {sampleSets.map((s) => (
+        {localeSets.map((s) => (
           <option key={s.id} value={s.id}>
-            {s.name} ({s.questions.length} pytań)
+            {s.name} ({t('quiz.editor.questionsCount', { count: s.questions.length })})
           </option>
         ))}
       </select>
@@ -110,7 +114,7 @@ export function QuestionEditor({
       {/* Time limit */}
       <div style={{ marginBottom: 16 }}>
         <label style={{ fontWeight: 600, display: 'block', marginBottom: 6 }}>
-          Czas na odpowiedź: {localTimeLimit}s
+          {t('quiz.editor.timeLimit', { seconds: localTimeLimit })}
         </label>
         <input
           type="range"
@@ -146,7 +150,7 @@ export function QuestionEditor({
           </div>
           <div className="quiz-editor-actions">
             <button className="delete" onClick={() => removeQuestion(q.id)}>
-              Usuń
+              {t('common.delete')}
             </button>
           </div>
         </div>
@@ -155,11 +159,11 @@ export function QuestionEditor({
       {/* Add form */}
       {showAddForm ? (
         <div className="quiz-add-form">
-          <label>Pytanie</label>
+          <label>{t('quiz.editor.questionLabel')}</label>
           <textarea
             value={newText}
             onChange={(e) => setNewText(e.target.value)}
-            placeholder="Treść pytania..."
+            placeholder={t('quiz.editor.questionPlaceholder')}
           />
           {['A', 'B', 'C', 'D'].map((label, i) => (
             <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -177,16 +181,16 @@ export function QuestionEditor({
                   opts[i] = e.target.value;
                   setNewOptions(opts);
                 }}
-                placeholder={`Opcja ${label}...`}
+                placeholder={t('quiz.editor.optionPlaceholder', { label })}
               />
             </div>
           ))}
           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
             <button className="btn-primary" style={{ flex: 1 }} onClick={addQuestion}>
-              Dodaj pytanie
+              {t('quiz.editor.addQuestionBtn')}
             </button>
             <button onClick={() => setShowAddForm(false)} style={{ padding: '8px 16px', border: '1px solid #d1d5db', borderRadius: 6, background: '#fff', cursor: 'pointer' }}>
-              Anuluj
+              {t('common.cancel')}
             </button>
           </div>
         </div>
@@ -197,13 +201,13 @@ export function QuestionEditor({
             style={{ flex: 1 }}
             onClick={() => setShowAddForm(true)}
           >
-            + Dodaj pytanie
+            {t('quiz.editor.addQuestion')}
           </button>
           <button
             onClick={handleJsonImport}
             style={{ padding: '10px 16px', border: '1px solid #d1d5db', borderRadius: 6, background: '#fff', cursor: 'pointer' }}
           >
-            Import JSON
+            {t('quiz.editor.importJson')}
           </button>
         </div>
       )}
@@ -215,7 +219,7 @@ export function QuestionEditor({
         disabled={localQuestions.length === 0}
         style={{ marginTop: 16, padding: '14px 20px', fontSize: '1.1rem' }}
       >
-        Rozpocznij quiz ({localQuestions.length} pytań)
+        {t('quiz.editor.startQuiz', { count: localQuestions.length })}
       </button>
     </div>
   );

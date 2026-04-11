@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import type { GameClientPlugin } from '@gamehub/core';
+import { useT, useRegisterTranslations } from '@gamehub/i18n';
+import type { Locale } from '@gamehub/i18n';
 import { useSocket } from '../context/SocketContext';
 import { useSocketConnection } from '../hooks/useSocketConnection';
 import { useGameState } from '../hooks/useGameState';
@@ -81,9 +83,11 @@ export function GamePage({ mode }: { mode: 'host' | 'controller' }) {
   const { gameId } = useParams<{ gameId: string }>();
   const navigate = useNavigate();
   const socket = useSocket();
+  const t = useT();
   const { status, connect } = useSocketConnection(socket);
   const game = useGameState(socket, gameId, defaultPatchHandler);
   const [plugin, setPlugin] = useState<GameClientPlugin | null>(null);
+  const registerTranslations = useRegisterTranslations();
   useWakeLock();
 
   const hubId = sessionStorage.getItem('gamehub_hubId');
@@ -102,12 +106,23 @@ export function GamePage({ mode }: { mode: 'host' | 'controller' }) {
   // Load plugin when game type is known
   useEffect(() => {
     if (!game.gameType) return;
-    getGamePlugin(game.gameType).then(setPlugin);
-  }, [game.gameType]);
+    getGamePlugin(game.gameType).then((p) => {
+      if (p) {
+        // Register plugin translations if available
+        const pluginWithLocales = p as GameClientPlugin & { locales?: Record<string, Record<string, string>> };
+        if (pluginWithLocales.locales) {
+          for (const [locale, translations] of Object.entries(pluginWithLocales.locales)) {
+            registerTranslations(locale as Locale, translations);
+          }
+        }
+      }
+      setPlugin(p);
+    });
+  }, [game.gameType, registerTranslations]);
 
   if (!plugin) {
     return (
-      <div style={{ textAlign: 'center', padding: 40 }}>Ładowanie gry...</div>
+      <div style={{ textAlign: 'center', padding: 40 }}>{t('game.loading')}</div>
     );
   }
 
@@ -135,7 +150,7 @@ export function GamePage({ mode }: { mode: 'host' | 'controller' }) {
               onClick={returnToHub}
               style={{ padding: '12px 24px' }}
             >
-              Wróć do GameHub
+              {t('hub.returnToHub')}
             </button>
           </div>
         )}
