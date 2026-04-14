@@ -90,7 +90,7 @@ export function HubPage() {
     });
     const data = await res.json();
     if (!res.ok) {
-      setAddError(data.error || t('hub.addPlayerError'));
+      setAddError(t(data.error) || t('hub.addPlayerError'));
       return;
     }
     setPlayerName('');
@@ -119,7 +119,7 @@ export function HubPage() {
       });
       if (!res.ok) {
         const data = await res.json();
-        alert(data.error || t('hub.createGameError'));
+        alert(t(data.error) || t('hub.createGameError'));
       }
       // Navigation happens via hub:game-created event
     } finally {
@@ -244,25 +244,70 @@ export function HubPage() {
         )}
       </div>
 
-      {/* Game selection */}
-      <h3 style={{ marginBottom: 8 }}>{t('hub.chooseGame')}</h3>
-      {games.length === 0 ? (
-        <p style={{ color: '#9ca3af' }}>{t('common.loading')}</p>
-      ) : (
-        <div className="launcher-grid">
-          {games.map((g) => (
-            <GameTile
-              key={g.id}
-              config={g}
-              onClick={() => createGame(g.id)}
-            />
-          ))}
+      {/* Game in progress OR game selection */}
+      {hub.activeGameId ? (
+        <div style={{ textAlign: 'center', padding: '20px 0' }}>
+          <h3 style={{ marginBottom: 12 }}>{t('hub.gameInProgress')}</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'center' }}>
+            <button
+              className="btn-primary"
+              onClick={() => {
+                sessionStorage.setItem('gamehub_gameId', hub.activeGameId!);
+                sessionStorage.setItem('gamehub_token', sessionStorage.getItem('gamehub_hub_token')!);
+                if (hub.mode === 'local') sessionStorage.setItem('gamehub_local', 'true');
+                navigate(`/game/${hub.activeGameId}/play`);
+              }}
+              style={{ padding: '12px 24px', maxWidth: 300, width: '100%' }}
+            >
+              {t('hub.returnToGame')}
+            </button>
+            <button
+              onClick={async () => {
+                if (!confirm(t('hub.confirmForceFinish'))) return;
+                const token = sessionStorage.getItem('gamehub_hub_token');
+                await fetch(`/api/hub/${hubId}/finish-game`, {
+                  method: 'POST',
+                  headers: { 'X-Hub-Token': token! },
+                });
+              }}
+              style={{
+                padding: '10px 20px',
+                background: '#fee2e2',
+                color: '#dc2626',
+                border: 'none',
+                borderRadius: 6,
+                cursor: 'pointer',
+                fontWeight: 600,
+                maxWidth: 300,
+                width: '100%',
+              }}
+            >
+              {t('hub.forceFinish')}
+            </button>
+          </div>
         </div>
-      )}
-      {creating && (
-        <p style={{ textAlign: 'center', color: '#6b7280', marginTop: 8 }}>
-          {t('hub.creatingGame')}
-        </p>
+      ) : (
+        <>
+          <h3 style={{ marginBottom: 8 }}>{t('hub.chooseGame')}</h3>
+          {games.length === 0 ? (
+            <p style={{ color: '#9ca3af' }}>{t('common.loading')}</p>
+          ) : (
+            <div className="launcher-grid">
+              {games.map((g) => (
+                <GameTile
+                  key={g.id}
+                  config={g}
+                  onClick={() => createGame(g.id)}
+                />
+              ))}
+            </div>
+          )}
+          {creating && (
+            <p style={{ textAlign: 'center', color: '#6b7280', marginTop: 8 }}>
+              {t('hub.creatingGame')}
+            </p>
+          )}
+        </>
       )}
 
       {/* Game history */}

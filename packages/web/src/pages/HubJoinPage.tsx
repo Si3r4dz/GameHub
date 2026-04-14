@@ -30,7 +30,7 @@ export function HubJoinPage() {
     const data = await res.json();
 
     if (!res.ok) {
-      setError(data.error || t('hubJoin.error'));
+      setError(t(data.error) || t('hubJoin.error'));
       return;
     }
 

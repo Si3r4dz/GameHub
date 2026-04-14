@@ -97,6 +97,56 @@ export function registerHubRoutes(
     },
   );
 
+  // Force-finish active game from hub
+  app.post<{ Params: { hubId: string } }>(
+    '/api/hub/:hubId/finish-game',
+    async (req, reply) => {
+      const hub = hubStore.get(req.params.hubId);
+      if (!hub) return reply.status(404).send({ error: 'error.hubNotFound' });
+
+      const token = req.headers['x-hub-token'] as string | undefined;
+      if (token !== hub.hostToken) {
+        return reply.status(403).send({ error: 'error.hostOnly' });
+      }
+
+      if (!hub.activeGameId) {
+        return { ok: true }; // no game to finish
+      }
+
+      const session = gameStore.get(hub.activeGameId);
+      if (session) {
+        session.phase = 'finished';
+        // Notify game room
+        io.to(session.id).emit('game:state', {
+          gameId: session.id,
+          gameType: session.gameType,
+          players: session.players.map((p) => ({ index: p.index, name: p.name, connected: p.connected })),
+          gameState: session.gameState,
+          isHost: true,
+          playerIndex: null,
+          phase: 'finished',
+        });
+      }
+
+      // Clear hub active game and add to history
+      const plugin = plugins.get(session?.gameType ?? '');
+      hubStore.addToHistory(req.params.hubId, {
+        gameId: hub.activeGameId,
+        gameType: session?.gameType ?? '',
+        gameName: plugin?.config.name ?? session?.gameType ?? '',
+        finishedAt: new Date(),
+        playerNames: session?.players.map((p) => p.name) ?? [],
+      });
+      hubStore.setActiveGame(req.params.hubId, null);
+
+      io.to(`hub:${hub.id}`).emit(HUB_EVENTS.HUB_GAME_FINISHED, {
+        gameId: hub.activeGameId,
+      });
+
+      return { ok: true };
+    },
+  );
+
   // Create game from hub
   app.post<{
     Params: { hubId: string };

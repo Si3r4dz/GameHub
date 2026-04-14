@@ -64,7 +64,7 @@ export function LobbyPage() {
     });
     const data = await res.json();
     if (!res.ok) {
-      setAddError(data.error || t('lobby.addPlayerError'));
+      setAddError(t(data.error) || t('lobby.addPlayerError'));
       return;
     }
     setPlayerName('');

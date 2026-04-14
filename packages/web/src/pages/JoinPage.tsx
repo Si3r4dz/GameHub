@@ -46,7 +46,7 @@ export function JoinPage() {
     const data = await res.json();
 
     if (!res.ok) {
-      setError(data.error || t('join.error'));
+      setError(t(data.error) || t('join.error'));
       return;
     }
 

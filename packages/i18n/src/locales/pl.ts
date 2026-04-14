@@ -67,6 +67,10 @@ export const pl: TranslationMap = {
   'hub.creatingGame': 'Tworzenie gry...',
   'hub.gameHistory': 'Historia gier',
   'hub.returnToHub': 'Wróć do GameHub',
+  'hub.gameInProgress': 'Gra w toku',
+  'hub.returnToGame': 'Wróć do gry',
+  'hub.forceFinish': 'Zakończ grę',
+  'hub.confirmForceFinish': 'Na pewno zakończyć trwającą grę?',
 
   // Hub Join
   'hubJoin.title': 'Dołącz do GameHub',
